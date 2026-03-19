@@ -1,0 +1,36 @@
+# Feature definitions and engineering parameters
+
+elo:
+  initial_rating: 1500
+  k_factor: 20
+  home_advantage: 100
+  season_carryover: 0.75  # Regress toward mean between seasons
+
+efficiency:
+  # Per-possession metrics
+  metrics:
+    - offensive_efficiency
+    - defensive_efficiency
+    - effective_fg_pct
+    - turnover_pct
+    - offensive_rebound_pct
+    - free_throw_rate
+
+strength_of_schedule:
+  levels: 3  # WP, opponent WP, opponent-of-opponent WP
+
+seeds:
+  # Nonlinear transforms for seed number
+  transforms:
+    - raw
+    - squared
+    - log
+
+massey:
+  # Which ranking systems to use from MasseyOrdinals
+  systems:
+    - "POM"   # Pomeroy/KenPom
+    - "SAG"   # Sagarin
+    - "MOR"   # Morong
+    - "DOL"   # Dolphin
+  aggregation: "last_available"  # Use last ranking of regular season

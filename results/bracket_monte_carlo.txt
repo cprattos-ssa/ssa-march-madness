@@ -1,0 +1,132 @@
+==========================================================================================
+  BRACKET 2: UPSET-AWARE MONTE CARLO (Ensemble, 10,000 sims)
+==========================================================================================
+
+--- First Four (Play-In) ---
+  X16                        (16) Lehigh  def.  (16) Prairie View             (MC Win%: 77.5%)
+  Y11                      (11) Miami OH  def.  (11) SMU                      (MC Win%: 93.7%)
+  Y16                          (16) UMBC  def.  (16) Howard                   (MC Win%: 73.3%)
+  Z11                         (11) Texas  def.  (11) NC State                 (MC Win%: 37.5%)
+
+--- Round of 64 ---
+  R1W1                          (1) Duke  def.  (16) Siena                    (MC Win%: 99.5%)
+  R1W2                   (2) Connecticut  def.  (15) Furman                   (MC Win%: 98.4%)
+  R1W3                   (3) Michigan St  def.  (14) N Dakota St              (MC Win%: 89.7%)
+  R1W4                        (4) Kansas  def.  (13) Cal Baptist              (MC Win%: 85.4%)
+  R1W5                     (5) St John's  def.  (12) Northern Iowa            (MC Win%: 97.3%)
+  R1W6                (11) South Florida  def.  (6) Louisville                (MC Win%: 72.5%)  ** UPSET **
+  R1W7                          (7) UCLA  def.  (10) UCF                      (MC Win%: 97.2%)
+  R1W8                       (8) Ohio St  def.  (9) TCU                       (MC Win%: 79.9%)
+  R1X1                       (1) Florida  def.  (16) Lehigh                   (MC Win%: 99.5%)
+  R1X2                       (2) Houston  def.  (15) Idaho                    (MC Win%: 98.3%)
+  R1X3                      (3) Illinois  def.  (14) Penn                     (MC Win%: 93.8%)
+  R1X4                      (4) Nebraska  def.  (13) Troy                     (MC Win%: 92.4%)
+  R1X5                    (5) Vanderbilt  def.  (12) McNeese St               (MC Win%: 86.7%)
+  R1X6                (6) North Carolina  def.  (11) VCU                      (MC Win%: 36.5%)
+  R1X7                  (7) St Mary's CA  def.  (10) Texas A&M                (MC Win%: 89.9%)
+  R1X8                       (8) Clemson  def.  (9) Iowa                      (MC Win%: 72.1%)
+  R1Y1                      (1) Michigan  def.  (16) UMBC                     (MC Win%: 98.3%)
+  R1Y2                       (2) Iowa St  def.  (15) Tennessee St             (MC Win%: 93.9%)
+  R1Y3                      (3) Virginia  def.  (14) Wright St                (MC Win%: 97.3%)
+  R1Y4                       (4) Alabama  def.  (13) Hofstra                  (MC Win%: 89.0%)
+  R1Y5                        (12) Akron  def.  (5) Texas Tech                (MC Win%: 77.2%)  ** UPSET **
+  R1Y6                     (11) Miami OH  def.  (6) Tennessee                 (MC Win%: 30.6%)  ** UPSET **
+  R1Y7                  (10) Santa Clara  def.  (7) Kentucky                  (MC Win%: 76.5%)  ** UPSET **
+  R1Y8                      (9) St Louis  def.  (8) Georgia                   (MC Win%: 70.6%)  ** UPSET **
+  R1Z1                       (1) Arizona  def.  (16) LIU Brooklyn             (MC Win%: 99.2%)
+  R1Z2                        (2) Purdue  def.  (15) Queens NC                (MC Win%: 95.7%)
+  R1Z3                       (3) Gonzaga  def.  (14) Kennesaw                 (MC Win%: 96.3%)
+  R1Z4                      (4) Arkansas  def.  (13) Hawaii                   (MC Win%: 98.0%)
+  R1Z5                     (5) Wisconsin  def.  (12) High Point               (MC Win%: 95.0%)
+  R1Z6                           (6) BYU  def.  (11) Texas                    (MC Win%: 94.7%)
+  R1Z7                      (7) Miami FL  def.  (10) Missouri                 (MC Win%: 89.4%)
+  R1Z8                       (9) Utah St  def.  (8) Villanova                 (MC Win%: 93.1%)  ** UPSET **
+
+--- Round of 32 ---
+  R2W1                          (1) Duke  def.  (8) Ohio St                   (MC Win%: 96.8%)
+  R2W2                   (2) Connecticut  def.  (7) UCLA                      (MC Win%: 77.8%)
+  R2W3                   (3) Michigan St  def.  (11) South Florida            (MC Win%: 89.4%)
+  R2W4                     (5) St John's  def.  (4) Kansas                    (MC Win%: 95.2%)  ** UPSET **
+  R2X1                       (1) Florida  def.  (8) Clemson                   (MC Win%: 98.0%)
+  R2X2                       (2) Houston  def.  (7) St Mary's CA              (MC Win%: 92.2%)
+  R2X3                      (3) Illinois  def.  (6) North Carolina            (MC Win%: 92.6%)
+  R2X4                    (5) Vanderbilt  def.  (4) Nebraska                  (MC Win%: 82.3%)  ** UPSET **
+  R2Y1                      (1) Michigan  def.  (9) St Louis                  (MC Win%: 96.8%)
+  R2Y2                       (2) Iowa St  def.  (10) Santa Clara              (MC Win%: 86.1%)
+  R2Y3                      (3) Virginia  def.  (11) Miami OH                 (MC Win%: 94.5%)
+  R2Y4                        (12) Akron  def.  (4) Alabama                   (MC Win%: 35.4%)  ** UPSET **
+  R2Z1                       (1) Arizona  def.  (9) Utah St                   (MC Win%: 94.8%)
+  R2Z2                        (2) Purdue  def.  (7) Miami FL                  (MC Win%: 94.6%)
+  R2Z3                       (3) Gonzaga  def.  (6) BYU                       (MC Win%: 91.3%)
+  R2Z4                      (4) Arkansas  def.  (5) Wisconsin                 (MC Win%: 93.4%)
+
+--- Sweet 16 ---
+  R3W1                          (1) Duke  def.  (5) St John's                 (MC Win%: 86.7%)
+  R3W2                   (3) Michigan St  def.  (2) Connecticut               (MC Win%: 41.0%)  ** UPSET **
+  R3X1                       (1) Florida  def.  (5) Vanderbilt                (MC Win%: 90.7%)
+  R3X2                       (2) Houston  def.  (3) Illinois                  (MC Win%: 91.7%)
+  R3Y1                      (1) Michigan  def.  (12) Akron                    (MC Win%: 96.0%)
+  R3Y2                       (2) Iowa St  def.  (3) Virginia                  (MC Win%: 48.6%)
+  R3Z1                       (1) Arizona  def.  (4) Arkansas                  (MC Win%: 88.3%)
+  R3Z2                        (2) Purdue  def.  (3) Gonzaga                   (MC Win%: 37.2%)
+
+--- Elite 8 ---
+  R4W1                          (1) Duke  def.  (3) Michigan St               (MC Win%: 99.0%)
+  R4X1                       (2) Houston  def.  (1) Florida                   (MC Win%: 37.0%)  ** UPSET **
+  R4Y1                      (1) Michigan  def.  (2) Iowa St                   (MC Win%: 91.0%)
+  R4Z1                       (1) Arizona  def.  (2) Purdue                    (MC Win%: 94.4%)
+
+--- Final Four ---
+  R5WX                          (1) Duke  def.  (2) Houston                   (MC Win%: 93.0%)
+  R5YZ                       (1) Arizona  def.  (1) Michigan                  (MC Win%: 71.3%)
+
+--- Championship ---
+  R6CH                       (1) Arizona  def.  (1) Duke                      (MC Win%: 30.2%)
+
+************************************************************
+  CHAMPION:  (1) Arizona
+************************************************************
+
+--- Key Upsets ---
+         Round of 64:  (11) South Florida  over  (6) Louisville  (72.5%)
+         Round of 64:  (12) Akron  over  (5) Texas Tech  (77.2%)
+         Round of 64:  (11) Miami OH  over  (6) Tennessee  (30.6%)
+         Round of 64:  (10) Santa Clara  over  (7) Kentucky  (76.5%)
+         Round of 64:  (9) St Louis  over  (8) Georgia  (70.6%)
+         Round of 64:  (9) Utah St  over  (8) Villanova  (93.1%)
+         Round of 32:  (5) St John's  over  (4) Kansas  (95.2%)
+         Round of 32:  (5) Vanderbilt  over  (4) Nebraska  (82.3%)
+         Round of 32:  (12) Akron  over  (4) Alabama  (35.4%)
+            Sweet 16:  (3) Michigan St  over  (2) Connecticut  (41.0%)
+             Elite 8:  (2) Houston  over  (1) Florida  (37.0%)
+
+
+------------------------------------------------------------------------------------------
+  Monte Carlo Simulation Statistics (10,000 simulations)
+------------------------------------------------------------------------------------------
+
+  Championship Win Probability (top 10):
+                          (1) Duke:  59.0%
+                       (1) Arizona:  25.5%
+                      (1) Michigan:  10.9%
+                       (1) Florida:  2.2%
+                       (2) Houston:  0.9%
+                     (5) St John's:  0.8%
+                       (3) Gonzaga:  0.2%
+                      (4) Arkansas:  0.1%
+                        (2) Purdue:  0.1%
+                       (2) Iowa St:  0.1%
+
+  Final Four Appearance Rates (top 12):
+                          (1) Duke:  84.9%
+                       (1) Arizona:  82.9%
+                      (1) Michigan:  79.5%
+                       (1) Florida:  60.7%
+                       (2) Houston:  35.7%
+                     (5) St John's:  12.6%
+                       (2) Iowa St:  7.8%
+                       (3) Gonzaga:  7.6%
+                      (3) Virginia:  7.6%
+                        (2) Purdue:  4.9%
+                      (4) Arkansas:  4.5%
+                       (4) Alabama:  3.4%

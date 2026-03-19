@@ -1,0 +1,30 @@
+seed: 42
+
+# Season range for training data
+seasons_train: [2003, 2025]
+season_predict: 2026
+
+# Gender: "mens" or "womens" — controls which CSV prefix (M/W) is used
+gender: "mens"
+
+# Paths
+data_dir: "data"
+models_dir: "models"
+results_dir: "results"
+
+# Feature groups to include (toggle on/off)
+feature_groups:
+  efficiency: true
+  elo: true
+  strength_of_schedule: true
+  seeds: true
+  kenpom: true
+  massey: true
+
+# Cross-validation
+cv:
+  strategy: "leave_one_tournament_out"  # or "temporal"
+  n_recent_seasons: 5  # for temporal CV
+
+# Model selection
+active_model: "xgboost"  # logistic, xgboost, neural_net, ensemble

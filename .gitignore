@@ -1,0 +1,44 @@
+# Data (raw and intermediate — too large for git)
+data/raw/
+data/interim/
+data/processed/
+
+# Keep submissions tracked (small CSVs, want history)
+!data/submissions/
+
+# Model artifacts
+models/*.pkl
+models/*.joblib
+models/*.pt
+
+# Python
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Notebooks
+.ipynb_checkpoints/
+notebooks/scratch/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Misc
+*.log
+.ruff_cache/

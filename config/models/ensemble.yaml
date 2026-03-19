@@ -1,0 +1,9 @@
+model_type: ensemble
+strategy: "weighted_average"  # or "stacking"
+models:
+  - name: logistic
+    weight: 0.2
+  - name: xgboost
+    weight: 0.5
+  - name: neural_net
+    weight: 0.3

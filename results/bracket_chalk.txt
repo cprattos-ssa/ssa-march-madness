@@ -1,0 +1,99 @@
+==========================================================================================
+  BRACKET 1: CHALK (LightGBM — always pick the favorite)
+==========================================================================================
+
+--- First Four (Play-In) ---
+  X16                        (16) Lehigh  def.  (16) Prairie View             (Win Prob: 76.5%)
+  Y11                      (11) Miami OH  def.  (11) SMU                      (Win Prob: 91.7%)
+  Y16                          (16) UMBC  def.  (16) Howard                   (Win Prob: 65.8%)
+  Z11                      (11) NC State  def.  (11) Texas                    (Win Prob: 68.9%)
+
+--- Round of 64 ---
+  R1W1                          (1) Duke  def.  (16) Siena                    (Win Prob: 99.4%)
+  R1W2                   (2) Connecticut  def.  (15) Furman                   (Win Prob: 98.1%)
+  R1W3                   (3) Michigan St  def.  (14) N Dakota St              (Win Prob: 95.0%)
+  R1W4                        (4) Kansas  def.  (13) Cal Baptist              (Win Prob: 90.9%)
+  R1W5                     (5) St John's  def.  (12) Northern Iowa            (Win Prob: 97.3%)
+  R1W6                (11) South Florida  def.  (6) Louisville                (Win Prob: 65.8%)  ** UPSET **
+  R1W7                          (7) UCLA  def.  (10) UCF                      (Win Prob: 96.1%)
+  R1W8                       (8) Ohio St  def.  (9) TCU                       (Win Prob: 81.9%)
+  R1X1                       (1) Florida  def.  (16) Lehigh                   (Win Prob: 99.3%)
+  R1X2                       (2) Houston  def.  (15) Idaho                    (Win Prob: 98.2%)
+  R1X3                      (3) Illinois  def.  (14) Penn                     (Win Prob: 92.7%)
+  R1X4                      (4) Nebraska  def.  (13) Troy                     (Win Prob: 93.9%)
+  R1X5                    (5) Vanderbilt  def.  (12) McNeese St               (Win Prob: 87.5%)
+  R1X6                          (11) VCU  def.  (6) North Carolina            (Win Prob: 60.8%)  ** UPSET **
+  R1X7                  (7) St Mary's CA  def.  (10) Texas A&M                (Win Prob: 91.5%)
+  R1X8                       (8) Clemson  def.  (9) Iowa                      (Win Prob: 79.7%)
+  R1Y1                      (1) Michigan  def.  (16) UMBC                     (Win Prob: 97.4%)
+  R1Y2                       (2) Iowa St  def.  (15) Tennessee St             (Win Prob: 95.9%)
+  R1Y3                      (3) Virginia  def.  (14) Wright St                (Win Prob: 97.1%)
+  R1Y4                       (4) Alabama  def.  (13) Hofstra                  (Win Prob: 85.7%)
+  R1Y5                        (12) Akron  def.  (5) Texas Tech                (Win Prob: 72.7%)  ** UPSET **
+  R1Y6                     (6) Tennessee  def.  (11) Miami OH                 (Win Prob: 56.6%)
+  R1Y7                  (10) Santa Clara  def.  (7) Kentucky                  (Win Prob: 70.4%)  ** UPSET **
+  R1Y8                      (9) St Louis  def.  (8) Georgia                   (Win Prob: 63.7%)  ** UPSET **
+  R1Z1                       (1) Arizona  def.  (16) LIU Brooklyn             (Win Prob: 99.1%)
+  R1Z2                        (2) Purdue  def.  (15) Queens NC                (Win Prob: 93.7%)
+  R1Z3                       (3) Gonzaga  def.  (14) Kennesaw                 (Win Prob: 94.8%)
+  R1Z4                      (4) Arkansas  def.  (13) Hawaii                   (Win Prob: 97.1%)
+  R1Z5                     (5) Wisconsin  def.  (12) High Point               (Win Prob: 95.7%)
+  R1Z6                           (6) BYU  def.  (11) NC State                 (Win Prob: 92.4%)
+  R1Z7                      (7) Miami FL  def.  (10) Missouri                 (Win Prob: 94.7%)
+  R1Z8                       (9) Utah St  def.  (8) Villanova                 (Win Prob: 94.3%)  ** UPSET **
+
+--- Round of 32 ---
+  R2W1                          (1) Duke  def.  (8) Ohio St                   (Win Prob: 94.5%)
+  R2W2                   (2) Connecticut  def.  (7) UCLA                      (Win Prob: 86.2%)
+  R2W3                   (3) Michigan St  def.  (11) South Florida            (Win Prob: 96.7%)
+  R2W4                     (5) St John's  def.  (4) Kansas                    (Win Prob: 95.2%)  ** UPSET **
+  R2X1                       (1) Florida  def.  (8) Clemson                   (Win Prob: 98.0%)
+  R2X2                       (2) Houston  def.  (7) St Mary's CA              (Win Prob: 91.5%)
+  R2X3                      (3) Illinois  def.  (11) VCU                      (Win Prob: 76.8%)
+  R2X4                    (5) Vanderbilt  def.  (4) Nebraska                  (Win Prob: 89.1%)  ** UPSET **
+  R2Y1                      (1) Michigan  def.  (9) St Louis                  (Win Prob: 96.2%)
+  R2Y2                       (2) Iowa St  def.  (10) Santa Clara              (Win Prob: 94.2%)
+  R2Y3                      (3) Virginia  def.  (6) Tennessee                 (Win Prob: 80.7%)
+  R2Y4                       (4) Alabama  def.  (12) Akron                    (Win Prob: 67.1%)
+  R2Z1                       (1) Arizona  def.  (9) Utah St                   (Win Prob: 92.1%)
+  R2Z2                        (2) Purdue  def.  (7) Miami FL                  (Win Prob: 97.7%)
+  R2Z3                       (3) Gonzaga  def.  (6) BYU                       (Win Prob: 89.7%)
+  R2Z4                      (4) Arkansas  def.  (5) Wisconsin                 (Win Prob: 95.2%)
+
+--- Sweet 16 ---
+  R3W1                          (1) Duke  def.  (5) St John's                 (Win Prob: 93.3%)
+  R3W2                   (2) Connecticut  def.  (3) Michigan St               (Win Prob: 69.4%)
+  R3X1                       (1) Florida  def.  (5) Vanderbilt                (Win Prob: 89.9%)
+  R3X2                       (2) Houston  def.  (3) Illinois                  (Win Prob: 90.4%)
+  R3Y1                      (1) Michigan  def.  (4) Alabama                   (Win Prob: 89.3%)
+  R3Y2                       (2) Iowa St  def.  (3) Virginia                  (Win Prob: 55.7%)
+  R3Z1                       (1) Arizona  def.  (4) Arkansas                  (Win Prob: 91.6%)
+  R3Z2                       (3) Gonzaga  def.  (2) Purdue                    (Win Prob: 72.1%)  ** UPSET **
+
+--- Elite 8 ---
+  R4W1                          (1) Duke  def.  (2) Connecticut               (Win Prob: 97.6%)
+  R4X1                       (1) Florida  def.  (2) Houston                   (Win Prob: 72.3%)
+  R4Y1                      (1) Michigan  def.  (2) Iowa St                   (Win Prob: 87.8%)
+  R4Z1                       (1) Arizona  def.  (3) Gonzaga                   (Win Prob: 91.6%)
+
+--- Final Four ---
+  R5WX                          (1) Duke  def.  (1) Florida                   (Win Prob: 88.4%)
+  R5YZ                       (1) Arizona  def.  (1) Michigan                  (Win Prob: 78.0%)
+
+--- Championship ---
+  R6CH                          (1) Duke  def.  (1) Arizona                   (Win Prob: 78.4%)
+
+************************************************************
+  CHAMPION:  (1) Duke
+************************************************************
+
+--- Key Upsets ---
+         Round of 64:  (11) South Florida  over  (6) Louisville  (65.8%)
+         Round of 64:  (11) VCU  over  (6) North Carolina  (60.8%)
+         Round of 64:  (12) Akron  over  (5) Texas Tech  (72.7%)
+         Round of 64:  (10) Santa Clara  over  (7) Kentucky  (70.4%)
+         Round of 64:  (9) St Louis  over  (8) Georgia  (63.7%)
+         Round of 64:  (9) Utah St  over  (8) Villanova  (94.3%)
+         Round of 32:  (5) St John's  over  (4) Kansas  (95.2%)
+         Round of 32:  (5) Vanderbilt  over  (4) Nebraska  (89.1%)
+            Sweet 16:  (3) Gonzaga  over  (2) Purdue  (72.1%)
