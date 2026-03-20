@@ -64,6 +64,20 @@ EXTENDED_FEATURES = CORE_FEATURES + [
     "TORD_diff",
 ]
 
+# Extended + player features (Barttorvik, 2021+ only - trees handle NaN natively)
+PLAYER_FEATURES = [
+    "Team_WAR_diff",
+    "Star_WAR_diff",
+    "WAR_Gini_diff",
+    "Avg_ClassNum_diff",
+    "Star_Usage_diff",
+    "Top3_WAR_diff",
+    "Avg_Height_diff",
+    "Sr_Pct_diff",
+]
+
+EXTENDED_PLAYER_FEATURES = EXTENDED_FEATURES + PLAYER_FEATURES
+
 
 def build_cv_splits(
     train_df: pd.DataFrame,

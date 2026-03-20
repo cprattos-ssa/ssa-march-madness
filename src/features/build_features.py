@@ -8,6 +8,9 @@ from src.features.elo import compute_elo_ratings
 from src.features.efficiency import compute_team_season_stats
 from src.features.seeds import build_seed_features
 from src.features.strength_of_schedule import compute_sos
+from src.features.player_features import (
+    load_player_data, map_schools_to_team_ids, aggregate_player_features,
+)
 
 
 def load_kaggle_data(data_dir: str = "data/raw/kaggle", gender: str = "mens") -> dict:
@@ -191,6 +194,20 @@ def build_all_team_features(
 
     # 6. External data
     team_features = merge_external_features(team_features, external, name_to_id)
+
+    # 7. Player-level features (Barttorvik, 2021-2026 only)
+    player_data_dir = os.path.join("data", "raw", "external", "player_data")
+    if os.path.exists(player_data_dir):
+        player_seasons = list(range(2021, 2027))
+        players = load_player_data(player_data_dir, player_seasons)
+        if len(players) > 0:
+            players = map_schools_to_team_ids(players, name_to_id)
+            player_feats = aggregate_player_features(players)
+            team_features = team_features.merge(
+                player_feats, on=["Season", "TeamID"], how="left"
+            )
+            matched = player_feats.TeamID.nunique()
+            print(f"  Player features: {len(player_feats)} team-seasons ({matched} teams matched)")
 
     # Filter to seasons with detailed data
     team_features = team_features[team_features["Season"] >= min_season]

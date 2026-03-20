@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How We Built a March Madness Predictor with Claude Code</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --void:#060a13;
+  --deep:#0c1220;
+  --card:#111b2e;
+  --surface:#182238;
+  --border:#1e2d4a;
+  --border-bright:#2a3f66;
+  --txt:#d1dced;
+  --txt-mid:#8899b3;
+  --txt-dim:#506380;
+  --flame:#ff6b35;
+  --flame-glow:rgba(255,107,53,.15);
+  --ember:#ff9f1c;
+  --aqua:#00d4aa;
+  --aqua-glow:rgba(0,212,170,.12);
+  --iris:#7b68ee;
+  --iris-glow:rgba(123,104,238,.12);
+  --rose:#ff4757;
+  --sun:#ffd93d;
+}
+
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--void);
+  color:var(--txt);
+  line-height:1.6;
+  overflow-x:hidden;
+}
+
+/* ============ UTILITY ============ */
+.mono{font-family:'Space Mono',monospace}
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-d1{transition-delay:.1s}.reveal-d2{transition-delay:.2s}.reveal-d3{transition-delay:.3s}.reveal-d4{transition-delay:.4s}.reveal-d5{transition-delay:.5s}
+
+/* ============ GRAIN OVERLAY ============ */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+  background-repeat:repeat;opacity:.5;
+}
+
+/* ============ HERO ============ */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;padding:3rem 2rem;position:relative;
+}
+.hero::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:1px;height:100%;
+  background:linear-gradient(to bottom,transparent 0%,var(--border) 30%,var(--flame) 50%,var(--border) 70%,transparent 100%);
+  opacity:.3;
+}
+.hero-label{
+  font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--flame);margin-bottom:2rem;
+  padding:.4rem 1.2rem;border:1px solid rgba(255,107,53,.25);border-radius:2px;
+  background:rgba(255,107,53,.05);
+}
+.hero h1{
+  font-size:clamp(2.4rem,5.5vw,4.2rem);font-weight:800;line-height:1.08;
+  margin-bottom:1.5rem;max-width:800px;letter-spacing:-.03em;
+}
+.hero h1 .accent{color:var(--flame)}
+.hero .sub{
+  font-size:1.1rem;color:var(--txt-mid);max-width:560px;margin:0 auto 3rem;font-weight:400;
+}
+.hero .scroll-cue{
+  position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:.4rem;
+  color:var(--txt-dim);font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;
+  font-family:'Space Mono',monospace;
+  animation:pulse-down 2.5s ease-in-out infinite;
+}
+.scroll-cue svg{width:16px;height:16px;stroke:var(--txt-dim);fill:none;stroke-width:2}
+@keyframes pulse-down{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(6px)}}
+
+/* ============ STATS STRIP ============ */
+.stats-strip{
+  display:grid;grid-template-columns:repeat(6,1fr);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.stat{
+  text-align:center;padding:2rem 1rem;
+  border-right:1px solid var(--border);
+  transition:background .3s;
+}
+.stat:last-child{border-right:none}
+.stat:hover{background:var(--card)}
+.stat-val{
+  font-family:'Space Mono',monospace;font-size:1.8rem;font-weight:700;
+  color:var(--flame);line-height:1;
+}
+.stat-lbl{font-size:.65rem;color:var(--txt-dim);text-transform:uppercase;letter-spacing:.1em;margin-top:.4rem}
+
+@media(max-width:768px){
+  .stats-strip{grid-template-columns:repeat(3,1fr)}
+  .stat{border-bottom:1px solid var(--border)}
+}
+
+/* ============ SECTIONS ============ */
+.section{max-width:1100px;margin:0 auto;padding:6rem 2rem}
+.section-tag{
+  font-family:'Space Mono',monospace;font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--flame);margin-bottom:1rem;display:block;
+}
+.section h2{font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:700;letter-spacing:-.02em;margin-bottom:.8rem;line-height:1.15}
+.section .lead{font-size:1rem;color:var(--txt-mid);max-width:640px;margin-bottom:3.5rem}
+
+/* ============ PIPELINE FLOWCHART ============ */
+.flow-container{
+  background:var(--deep);border:1px solid var(--border);border-radius:12px;
+  padding:3rem 2rem;position:relative;overflow:hidden;
+}
+.flow-container::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,107,53,.04),transparent 60%);
+  pointer-events:none;
+}
+
+.flow-section{margin-bottom:3rem}
+.flow-section:last-child{margin-bottom:0}
+.flow-label{
+  font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
+  margin-bottom:1.2rem;display:flex;align-items:center;gap:.8rem;
+}
+.flow-label .dot{width:6px;height:6px;border-radius:50%}
+.flow-label.trad .dot{background:var(--txt-dim)}
+.flow-label.trad{color:var(--txt-dim)}
+.flow-label.cc .dot{background:var(--flame)}
+.flow-label.cc{color:var(--flame)}
+
+/* Traditional: linear chain */
+.linear-chain{
+  display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:.5rem;
+}
+.chain-node{
+  flex-shrink:0;padding:.6rem 1rem;
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  font-size:.75rem;font-weight:500;white-space:nowrap;
+  position:relative;
+}
+.chain-node .dur{
+  display:block;font-family:'Space Mono',monospace;font-size:.55rem;color:var(--txt-dim);margin-top:.15rem;
+}
+.chain-arrow{
+  flex-shrink:0;width:28px;display:flex;align-items:center;justify-content:center;
+  color:var(--txt-dim);font-size:.7rem;
+}
+
+/* Claude Code: branching flow */
+.branch-flow{position:relative}
+
+.bf-row{
+  display:flex;align-items:stretch;margin-bottom:2px;min-height:52px;position:relative;
+}
+.bf-row+.bf-row{margin-top:0}
+
+.bf-time{
+  width:60px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;
+  font-family:'Space Mono',monospace;font-size:.55rem;color:var(--txt-dim);
+}
+
+.bf-track{flex:1;display:flex;align-items:center;gap:4px;padding:3px 0;position:relative;min-height:46px}
+
+.bf-node{
+  padding:.45rem .8rem;border-radius:5px;font-size:.7rem;font-weight:500;white-space:nowrap;
+  position:relative;display:flex;align-items:center;gap:.4rem;
+  transition:transform .2s,box-shadow .2s;
+}
+.bf-node:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+
+.bf-node.research{background:var(--iris-glow);border:1px solid rgba(123,104,238,.3);color:#a899f5}
+.bf-node.data{background:var(--aqua-glow);border:1px solid rgba(0,212,170,.25);color:var(--aqua)}
+.bf-node.model{background:var(--flame-glow);border:1px solid rgba(255,107,53,.3);color:var(--flame)}
+.bf-node.visual{background:rgba(255,217,61,.1);border:1px solid rgba(255,217,61,.25);color:var(--sun)}
+.bf-node.main{background:rgba(209,220,237,.06);border:1px solid rgba(209,220,237,.1);color:var(--txt-mid)}
+
+.bf-node .ico{font-size:.65rem;opacity:.7}
+
+/* Human decision callouts */
+.bf-human{
+  display:flex;align-items:center;gap:8px;
+  margin:12px 0 12px 60px;padding:0;
+}
+.bf-human-dot{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  background:var(--rose);display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;color:#fff;font-weight:700;box-shadow:0 0 12px rgba(255,71,87,.3);
+}
+.bf-human-text{
+  font-size:.72rem;color:var(--rose);font-style:italic;
+  padding:.35rem .8rem;border-left:2px solid rgba(255,71,87,.3);
+  background:rgba(255,71,87,.04);
+}
+.bf-human-text strong{font-style:normal;color:#ff8a97;font-weight:600}
+
+/* Connector lines (pure CSS) */
+.bf-connector{
+  position:absolute;left:66px;width:2px;background:var(--border);
+}
+
+.bf-spacer{height:6px}
+
+.bf-bracket{
+  display:flex;align-items:center;gap:4px;margin-left:4px;
+}
+.bf-brace{
+  width:12px;align-self:stretch;border:1px solid var(--border);border-left:none;
+  border-radius:0 6px 6px 0;
+}
+.bf-merge{
+  width:12px;align-self:stretch;border:1px solid var(--border);border-right:none;
+  border-radius:6px 0 0 6px;margin-right:4px;
+}
+
+.parallel-group{
+  display:flex;flex-direction:column;gap:3px;padding:2px 0;
+}
+
+/* ============ AGENT ARCHITECTURE ============ */
+.wave-grid{display:grid;grid-template-columns:1fr;gap:2rem}
+
+.wave{
+  background:var(--deep);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;transition:border-color .3s;
+}
+.wave:hover{border-color:var(--border-bright)}
+
+.wave-head{
+  padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;
+  background:linear-gradient(135deg,rgba(255,107,53,.03),transparent);
+}
+.wave-num{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--flame),var(--ember));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;font-size:.7rem;font-weight:700;color:var(--void);
+}
+.wave-info h3{font-size:.9rem;font-weight:600;line-height:1.2}
+.wave-info p{font-size:.7rem;color:var(--txt-dim)}
+.wave-dur{
+  margin-left:auto;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--aqua);
+  padding:.2rem .6rem;background:var(--aqua-glow);border-radius:3px;
+}
+
+.wave-agents{
+  padding:1rem 1.5rem;display:flex;flex-wrap:wrap;gap:.6rem;
+}
+
+.agent-pill{
+  display:inline-flex;align-items:center;gap:.5rem;
+  padding:.4rem .8rem;border-radius:6px;font-size:.7rem;font-weight:500;
+  transition:transform .15s;cursor:default;
+}
+.agent-pill:hover{transform:scale(1.03)}
+.agent-pill.research{background:var(--iris-glow);border:1px solid rgba(123,104,238,.2);color:#a899f5}
+.agent-pill.data{background:var(--aqua-glow);border:1px solid rgba(0,212,170,.2);color:var(--aqua)}
+.agent-pill.model{background:var(--flame-glow);border:1px solid rgba(255,107,53,.2);color:var(--flame)}
+.agent-pill.visual{background:rgba(255,217,61,.08);border:1px solid rgba(255,217,61,.2);color:var(--sun)}
+.agent-pill .a-label{
+  font-family:'Space Mono',monospace;font-size:.5rem;letter-spacing:.05em;text-transform:uppercase;
+  opacity:.7;
+}
+.agent-pill .a-output{font-size:.6rem;opacity:.6;margin-left:.3rem}
+
+/* ============ CALLOUT ============ */
+.callout{
+  border:1px solid rgba(255,107,53,.15);border-radius:10px;
+  padding:3rem;text-align:center;margin:4rem 0;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,rgba(255,107,53,.04),rgba(123,104,238,.03));
+}
+.callout blockquote{
+  font-size:clamp(1.2rem,2.5vw,1.6rem);font-weight:600;line-height:1.35;
+  max-width:600px;margin:0 auto 1rem;
+}
+.callout blockquote em{font-style:normal;color:var(--flame)}
+.callout .attr{font-size:.8rem;color:var(--txt-dim)}
+
+/* ============ FOOTER ============ */
+footer{
+  text-align:center;padding:3rem 2rem;border-top:1px solid var(--border);
+  font-size:.75rem;color:var(--txt-dim);
+}
+footer a{color:var(--flame);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<!-- ====== HERO ====== -->
+<section class="hero">
+  <div class="hero-label mono">South Shore Analytics / March Madness 2026</div>
+  <h1 class="reveal">A multi-week ML pipeline.<br><span class="accent">One working session.</span></h1>
+  <p class="sub reveal reveal-d1">We entered Kaggle's $50K March Madness prediction competition. An AI coding agent built the pipeline. A human steered the ship. Here's what that actually looked like.</p>
+  <div class="scroll-cue">
+    <span>Scroll</span>
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  </div>
+</section>
+
+<!-- ====== STATS ====== -->
+<div class="stats-strip">
+  <div class="stat reveal"><div class="stat-val mono">101</div><div class="stat-lbl">Data files ingested</div></div>
+  <div class="stat reveal reveal-d1"><div class="stat-val mono">30K</div><div class="stat-lbl">Player records</div></div>
+  <div class="stat reveal reveal-d2"><div class="stat-val mono">5&times;30</div><div class="stat-lbl">Models &times; configs</div></div>
+  <div class="stat reveal reveal-d3"><div class="stat-val mono">19</div><div class="stat-lbl">Visualizations</div></div>
+  <div class="stat reveal reveal-d4"><div class="stat-val mono">40+</div><div class="stat-lbl">Parallel agents</div></div>
+  <div class="stat reveal reveal-d5"><div class="stat-val mono">.050</div><div class="stat-lbl">Brier score</div></div>
+</div>
+
+<!-- ====== TRADITIONAL COMPARISON ====== -->
+<section class="section">
+  <span class="section-tag reveal">The Comparison</span>
+  <h2 class="reveal">Same stages. Radically different execution.</h2>
+  <p class="lead reveal">Traditional ML is single-threaded by nature - each phase blocks on the last. Claude Code parallelizes across autonomous agents while a human makes the strategic calls.</p>
+
+  <!-- ====== SVG DIAGRAM: TRADITIONAL ====== -->
+  <div class="flow-container reveal">
+    <div class="flow-label trad"><span class="dot"></span>Traditional ML Workflow<span style="margin-left:auto;font-size:.55rem;opacity:.6">~2-3 weeks, sequential (estimated from prior competition entries)</span></div>
+    <svg viewBox="0 0 960 80" width="100%" style="display:block;margin-bottom:2rem">
+      <defs>
+        <marker id="arr-gray" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#506380" stroke-width="1.2"/></marker>
+      </defs>
+      <!-- nodes -->
+      <g font-family="DM Sans,sans-serif" font-size="11" font-weight="500">
+        <rect x="0" y="10" width="110" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="55" y="34" fill="#d1dced" text-anchor="middle">Data Collection</text>
+        <text x="55" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">1-2 days</text>
+
+        <rect x="140" y="10" width="110" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="195" y="34" fill="#d1dced" text-anchor="middle">EDA &amp; Cleaning</text>
+        <text x="195" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">2-3 days</text>
+
+        <rect x="280" y="10" width="120" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="340" y="34" fill="#d1dced" text-anchor="middle">Feature Engineering</text>
+        <text x="340" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">3-4 days</text>
+
+        <rect x="430" y="10" width="110" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="485" y="34" fill="#d1dced" text-anchor="middle">Model Selection</text>
+        <text x="485" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">1-2 days</text>
+
+        <rect x="570" y="10" width="115" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="627" y="34" fill="#d1dced" text-anchor="middle">Training &amp; Tuning</text>
+        <text x="627" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">3-5 days</text>
+
+        <rect x="715" y="10" width="100" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="765" y="34" fill="#d1dced" text-anchor="middle">Evaluation</text>
+        <text x="765" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">1-2 days</text>
+
+        <rect x="845" y="10" width="105" height="58" rx="6" fill="#111b2e" stroke="#1e2d4a"/>
+        <text x="897" y="34" fill="#d1dced" text-anchor="middle">Visualization</text>
+        <text x="897" y="52" fill="#506380" text-anchor="middle" font-family="Space Mono,monospace" font-size="9">1-2 days</text>
+      </g>
+      <!-- arrows -->
+      <line x1="110" y1="39" x2="140" y2="39" stroke="#506380" stroke-width="1.2" marker-end="url(#arr-gray)"/>
+      <line x1="250" y1="39" x2="280" y2="39" stroke="#506380" stroke-width="1.2" marker-end="url(#arr-gray)"/>
+      <line x1="400" y1="39" x2="430" y2="39" stroke="#506380" stroke-width="1.2" marker-end="url(#arr-gray)"/>
+      <line x1="540" y1="39" x2="570" y2="39" stroke="#506380" stroke-width="1.2" marker-end="url(#arr-gray)"/>
+      <line x1="685" y1="39" x2="715" y2="39" stroke="#506380" stroke-width="1.2" marker-end="url(#arr-gray)"/>
+      <line x1="815" y1="39" x2="845" y2="39" stroke="#506380" stroke-width="1.2" marker-end="url(#arr-gray)"/>
+    </svg>
+  </div>
+
+  <!-- ====== SVG DIAGRAM: SESSION 1 - BUILDING THE PIPELINE ====== -->
+  <div class="flow-container reveal" style="margin-top:2rem;border-color:rgba(0,212,170,.2)">
+    <div class="flow-label cc" style="color:var(--aqua)"><span class="dot" style="background:var(--aqua)"></span>Session 1: Building the Full Pipeline<span style="margin-left:auto;font-size:.55rem;opacity:.6">~14 agents, end-to-end build + Kaggle submission</span></div>
+    <svg viewBox="0 0 960 580" width="100%" style="display:block">
+      <defs>
+        <marker id="arr-a2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#00d4aa" stroke-width="1.2"/></marker>
+        <marker id="arr-i2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#7b68ee" stroke-width="1.2"/></marker>
+        <marker id="arr-f2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#ff6b35" stroke-width="1.2"/></marker>
+        <marker id="arr-s2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#ffd93d" stroke-width="1.2"/></marker>
+      </defs>
+      <g font-family="DM Sans,sans-serif" font-size="10.5" font-weight="500">
+
+        <!-- Phase 1: Research + Data -->
+        <rect x="20" y="10" width="260" height="44" rx="6" fill="rgba(123,104,238,.1)" stroke="rgba(123,104,238,.3)"/>
+        <text x="150" y="30" fill="#a899f5" text-anchor="middle" font-size="10">Competition research: rules, strategy,</text>
+        <text x="150" y="44" fill="#a899f5" text-anchor="middle" font-size="10">data sources, past winning approaches</text>
+
+        <line x1="150" y1="54" x2="150" y2="72" stroke="#7b68ee" stroke-width="1.5" marker-end="url(#arr-i2)"/>
+
+        <rect x="20" y="76" width="260" height="44" rx="6" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.25)"/>
+        <text x="150" y="96" fill="#00d4aa" text-anchor="middle" font-size="10">Downloaded 101 CSVs from Kaggle +</text>
+        <text x="150" y="110" fill="#00d4aa" text-anchor="middle" font-size="10">3 external sources (Sundberg, Amin, Pilafas)</text>
+
+        <line x1="150" y1="120" x2="150" y2="138" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arr-a2)"/>
+
+        <!-- Phase 2: EDA -->
+        <rect x="20" y="142" width="260" height="44" rx="6" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.25)"/>
+        <text x="150" y="162" fill="#00d4aa" text-anchor="middle" font-size="10">EDA: profiled all 101 files, quality checks,</text>
+        <text x="150" y="176" fill="#00d4aa" text-anchor="middle" font-size="10">collinearity analysis (VIF), security audit</text>
+
+        <!-- Phase 3: Feature Engineering - branches into 5 modules -->
+        <line x1="150" y1="186" x2="150" y2="204" stroke="#00d4aa" stroke-width="1.5"/>
+
+        <!-- Horizontal bus -->
+        <line x1="95" y1="204" x2="865" y2="204" stroke="rgba(255,107,53,.4)" stroke-width="1.2"/>
+
+        <!-- Drop lines -->
+        <line x1="95" y1="204" x2="95" y2="218" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="290" y1="204" x2="290" y2="218" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="480" y1="204" x2="480" y2="218" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="670" y1="204" x2="670" y2="218" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="865" y1="204" x2="865" y2="218" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+
+        <text x="480" y="198" fill="#8899b3" text-anchor="middle" font-size="8" font-family="Space Mono,monospace" letter-spacing=".1em">5 FEATURE MODULES BUILT</text>
+
+        <!-- Feature boxes - evenly spaced -->
+        <rect x="20" y="222" width="150" height="42" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="95" y="240" fill="#ff6b35" text-anchor="middle" font-size="9">Custom Elo</text>
+        <text x="95" y="254" fill="#ff6b35" text-anchor="middle" font-size="8" opacity=".7">K=20, carryover=.75</text>
+
+        <rect x="190" y="222" width="200" height="42" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="290" y="240" fill="#ff6b35" text-anchor="middle" font-size="9">Efficiency metrics</text>
+        <text x="290" y="254" fill="#ff6b35" text-anchor="middle" font-size="8" opacity=".7">21 per-possession stats</text>
+
+        <rect x="410" y="222" width="140" height="42" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="480" y="240" fill="#ff6b35" text-anchor="middle" font-size="9">Schedule strength</text>
+        <text x="480" y="254" fill="#ff6b35" text-anchor="middle" font-size="8" opacity=".7">WP + OWP + OOWP</text>
+
+        <rect x="570" y="222" width="200" height="42" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="670" y="240" fill="#ff6b35" text-anchor="middle" font-size="9">Seed transforms</text>
+        <text x="670" y="254" fill="#ff6b35" text-anchor="middle" font-size="8" opacity=".7">log, sq, inv, hist win%</text>
+
+        <rect x="790" y="222" width="150" height="42" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="865" y="240" fill="#ff6b35" text-anchor="middle" font-size="9">External data</text>
+        <text x="865" y="254" fill="#ff6b35" text-anchor="middle" font-size="8" opacity=".7">Sundberg + KenPom</text>
+
+        <!-- Merge back via bus -->
+        <line x1="95" y1="264" x2="95" y2="278" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="290" y1="264" x2="290" y2="278" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="480" y1="264" x2="480" y2="278" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="670" y1="264" x2="670" y2="278" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="865" y1="264" x2="865" y2="278" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="95" y1="278" x2="865" y2="278" stroke="rgba(255,107,53,.4)" stroke-width="1.2"/>
+        <line x1="480" y1="278" x2="480" y2="296" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-f2)"/>
+
+        <!-- Merge node -->
+        <rect x="310" y="300" width="340" height="32" rx="5" fill="rgba(0,212,170,.08)" stroke="rgba(0,212,170,.2)"/>
+        <text x="480" y="320" fill="#00d4aa" text-anchor="middle" font-size="10" font-weight="600">57 features per team-season, matchup differentials built</text>
+
+        <!-- Phase 4: Model Training -->
+        <line x1="480" y1="332" x2="480" y2="348" stroke="#00d4aa" stroke-width="1.5"/>
+
+        <!-- Horizontal bus for models -->
+        <line x1="95" y1="348" x2="865" y2="348" stroke="rgba(255,107,53,.4)" stroke-width="1.2"/>
+        <line x1="95" y1="348" x2="95" y2="360" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="290" y1="348" x2="290" y2="360" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="480" y1="348" x2="480" y2="360" stroke="#00d4aa" stroke-width="1.2" marker-end="url(#arr-a2)"/>
+        <line x1="670" y1="348" x2="670" y2="360" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+        <line x1="865" y1="348" x2="865" y2="360" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#arr-f2)"/>
+
+        <text x="480" y="344" fill="#8899b3" text-anchor="middle" font-size="8" font-family="Space Mono,monospace" letter-spacing=".1em">5 MODELS TRAINED IN PARALLEL (SEPARATE AGENTS)</text>
+
+        <rect x="20" y="364" width="150" height="44" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="95" y="382" fill="#ff6b35" text-anchor="middle" font-size="9">Logistic Reg</text>
+        <text x="95" y="398" fill="#ff6b35" text-anchor="middle" font-size="9" opacity=".6">Brier: 0.117</text>
+
+        <rect x="190" y="364" width="200" height="44" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="290" y="382" fill="#ff6b35" text-anchor="middle" font-size="9">Neural Net (PyTorch)</text>
+        <text x="290" y="398" fill="#ff6b35" text-anchor="middle" font-size="9" opacity=".6">Brier: 0.115</text>
+
+        <rect x="410" y="364" width="140" height="44" rx="5" fill="rgba(0,212,170,.15)" stroke="rgba(0,212,170,.4)"/>
+        <text x="480" y="382" fill="#00d4aa" text-anchor="middle" font-size="9" font-weight="700">LightGBM</text>
+        <text x="480" y="398" fill="#00d4aa" text-anchor="middle" font-size="9">Brier: 0.050</text>
+
+        <rect x="570" y="364" width="200" height="44" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="670" y="382" fill="#ff6b35" text-anchor="middle" font-size="9">XGBoost (12 configs)</text>
+        <text x="670" y="398" fill="#ff6b35" text-anchor="middle" font-size="9" opacity=".6">Brier: 0.054</text>
+
+        <rect x="790" y="364" width="150" height="44" rx="5" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.25)"/>
+        <text x="865" y="382" fill="#ff6b35" text-anchor="middle" font-size="9">Bradley-Terry</text>
+        <text x="865" y="398" fill="#ff6b35" text-anchor="middle" font-size="9" opacity=".6">Brier: 0.200</text>
+
+        <!-- Merge models -->
+        <line x1="95" y1="408" x2="95" y2="422" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="290" y1="408" x2="290" y2="422" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="480" y1="408" x2="480" y2="422" stroke="#00d4aa" stroke-width="1.5"/>
+        <line x1="670" y1="408" x2="670" y2="422" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="865" y1="408" x2="865" y2="422" stroke="#ff6b35" stroke-width="1.2"/>
+        <line x1="95" y1="422" x2="865" y2="422" stroke="rgba(255,107,53,.4)" stroke-width="1.2"/>
+        <line x1="480" y1="422" x2="480" y2="438" stroke="#ffd93d" stroke-width="1.5" marker-end="url(#arr-s2)"/>
+
+        <!-- Phase 5-6: Fork into calibration + simulation -->
+        <line x1="300" y1="438" x2="660" y2="438" stroke="rgba(255,217,61,.4)" stroke-width="1.2"/>
+        <line x1="300" y1="438" x2="300" y2="450" stroke="#ffd93d" stroke-width="1.2" marker-end="url(#arr-s2)"/>
+        <line x1="660" y1="438" x2="660" y2="450" stroke="#ffd93d" stroke-width="1.2" marker-end="url(#arr-s2)"/>
+
+        <rect x="140" y="454" width="320" height="44" rx="5" fill="rgba(255,217,61,.08)" stroke="rgba(255,217,61,.2)"/>
+        <text x="300" y="473" fill="#ffd93d" text-anchor="middle" font-size="10">Calibration + weighted ensemble</text>
+        <text x="300" y="489" fill="#ffd93d" text-anchor="middle" font-size="9" opacity=".7">50% LGBM + 35% XGB + 10% NN + 5% LR</text>
+
+        <rect x="500" y="454" width="320" height="44" rx="5" fill="rgba(255,217,61,.08)" stroke="rgba(255,217,61,.2)"/>
+        <text x="660" y="473" fill="#ffd93d" text-anchor="middle" font-size="10">10K Monte Carlo bracket simulations</text>
+        <text x="660" y="489" fill="#ffd93d" text-anchor="middle" font-size="9" opacity=".7">Chalk bracket + probabilistic tournament play</text>
+
+        <!-- Merge to final -->
+        <line x1="300" y1="498" x2="300" y2="512" stroke="#ffd93d" stroke-width="1.2"/>
+        <line x1="660" y1="498" x2="660" y2="512" stroke="#ffd93d" stroke-width="1.2"/>
+        <line x1="300" y1="512" x2="660" y2="512" stroke="rgba(0,212,170,.5)" stroke-width="1.2"/>
+        <line x1="480" y1="512" x2="480" y2="526" stroke="#00d4aa" stroke-width="1.5" marker-end="url(#arr-a2)"/>
+
+        <rect x="240" y="530" width="480" height="34" rx="5" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.3)"/>
+        <text x="480" y="552" fill="#00d4aa" text-anchor="middle" font-size="10.5" font-weight="600">2 Kaggle submissions (132K matchups) + bracket predictions</text>
+
+      </g>
+    </svg>
+  </div>
+
+  <!-- ====== SVG DIAGRAM: SESSION 2 - POST-MORTEM ====== -->
+  <div class="flow-container reveal" style="margin-top:2rem;border-color:rgba(255,107,53,.2)">
+    <div class="flow-label cc"><span class="dot"></span>Session 2: Post-Mortem Analysis (tournament day)<span style="margin-left:auto;font-size:.55rem;opacity:.6">~18 agents, ~3 hours - player data experiment, injury analysis, figures, article prep</span></div>
+    <svg viewBox="0 0 960 620" width="100%" style="display:block">
+      <defs>
+        <marker id="arr-flame" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#ff6b35" stroke-width="1.2"/></marker>
+        <marker id="arr-iris" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#7b68ee" stroke-width="1.2"/></marker>
+        <marker id="arr-aqua" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#00d4aa" stroke-width="1.2"/></marker>
+        <marker id="arr-rose" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#ff4757" stroke-width="1.2"/></marker>
+      </defs>
+
+      <g font-family="DM Sans,sans-serif" font-size="10.5" font-weight="500">
+
+        <!-- ===== START ===== -->
+        <rect x="20" y="10" width="200" height="42" rx="6" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.35)"/>
+        <text x="120" y="36" fill="#ff6b35" text-anchor="middle" font-weight="600">Scan full repo (31 files read)</text>
+        <text x="920" y="36" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">0:00</text>
+
+        <line x1="120" y1="52" x2="120" y2="68" stroke="#ff6b35" stroke-width="1.5"/>
+
+        <!-- ===== FORK 1: 3 research agents ===== -->
+        <line x1="150" y1="68" x2="830" y2="68" stroke="rgba(123,104,238,.35)" stroke-width="1.2"/>
+        <line x1="150" y1="68" x2="150" y2="80" stroke="#7b68ee" stroke-width="1.2" marker-end="url(#arr-iris)"/>
+        <line x1="400" y1="68" x2="400" y2="80" stroke="#7b68ee" stroke-width="1.2" marker-end="url(#arr-iris)"/>
+        <line x1="680" y1="68" x2="680" y2="80" stroke="#00d4aa" stroke-width="1.2" marker-end="url(#arr-aqua)"/>
+        <text x="490" y="63" fill="#8899b3" text-anchor="middle" font-size="8" font-family="Space Mono,monospace" letter-spacing=".1em">3 AGENTS IN PARALLEL (~5 min each)</text>
+        <text x="920" y="100" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">0:05</text>
+
+        <rect x="40" y="84" width="220" height="48" rx="6" fill="rgba(123,104,238,.1)" stroke="rgba(123,104,238,.3)"/>
+        <text x="150" y="104" fill="#a899f5" text-anchor="middle" font-size="10">Searched web for non-obvious</text>
+        <text x="150" y="120" fill="#a899f5" text-anchor="middle" font-size="10">basketball insights (39 calls)</text>
+
+        <rect x="280" y="84" width="240" height="48" rx="6" fill="rgba(123,104,238,.1)" stroke="rgba(123,104,238,.3)"/>
+        <text x="400" y="104" fill="#a899f5" text-anchor="middle" font-size="10">Ohio State game details +</text>
+        <text x="400" y="120" fill="#a899f5" text-anchor="middle" font-size="10">player data sources (20 calls)</text>
+
+        <rect x="540" y="84" width="280" height="48" rx="6" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.25)"/>
+        <text x="680" y="104" fill="#00d4aa" text-anchor="middle" font-size="10">Wrote 500-line analysis script,</text>
+        <text x="680" y="120" fill="#00d4aa" text-anchor="middle" font-size="10">generated 10 figures (6 dimensions)</text>
+
+        <!-- Merge 1 -->
+        <line x1="150" y1="132" x2="150" y2="144" stroke="#7b68ee" stroke-width="1.2"/>
+        <line x1="400" y1="132" x2="400" y2="144" stroke="#7b68ee" stroke-width="1.2"/>
+        <line x1="680" y1="132" x2="680" y2="144" stroke="#00d4aa" stroke-width="1.2"/>
+        <line x1="150" y1="144" x2="680" y2="144" stroke="rgba(255,107,53,.35)" stroke-width="1.2"/>
+        <line x1="400" y1="144" x2="400" y2="160" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-flame)"/>
+
+        <!-- ===== HUMAN 1 ===== -->
+        <circle cx="30" cy="178" r="11" fill="#ff4757" opacity=".9"/>
+        <text x="30" y="182" fill="white" text-anchor="middle" font-size="8" font-weight="700">H</text>
+        <text x="50" y="182" fill="#ff8a97" font-size="10" font-style="italic">"Add player-level data. My team lost - could individual stats have predicted it?"</text>
+        <text x="920" y="182" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">0:30</text>
+
+        <line x1="400" y1="192" x2="400" y2="210" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-flame)"/>
+
+        <!-- ===== FORK 2: 3 data agents ===== -->
+        <line x1="150" y1="214" x2="680" y2="214" stroke="rgba(0,212,170,.3)" stroke-width="1.2"/>
+        <line x1="150" y1="214" x2="150" y2="226" stroke="#00d4aa" stroke-width="1.2" marker-end="url(#arr-aqua)"/>
+        <line x1="400" y1="214" x2="400" y2="226" stroke="#00d4aa" stroke-width="1.2" marker-end="url(#arr-aqua)"/>
+        <line x1="680" y1="214" x2="680" y2="226" stroke="#7b68ee" stroke-width="1.2" marker-end="url(#arr-iris)"/>
+        <text x="420" y="210" fill="#8899b3" text-anchor="middle" font-size="8" font-family="Space Mono,monospace" letter-spacing=".1em">3 AGENTS IN PARALLEL (~4 min each)</text>
+        <text x="920" y="240" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">0:35</text>
+
+        <rect x="30" y="230" width="240" height="48" rx="6" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.25)"/>
+        <text x="150" y="250" fill="#00d4aa" text-anchor="middle" font-size="10">Discovered Barttorvik API, fetched</text>
+        <text x="150" y="266" fill="#00d4aa" text-anchor="middle" font-size="10">30K player CSVs (6 seasons)</text>
+
+        <rect x="290" y="230" width="220" height="48" rx="6" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.25)"/>
+        <text x="400" y="250" fill="#00d4aa" text-anchor="middle" font-size="10">Audited all 67 existing external</text>
+        <text x="400" y="266" fill="#00d4aa" text-anchor="middle" font-size="10">files - confirmed no player data</text>
+
+        <rect x="530" y="230" width="300" height="48" rx="6" fill="rgba(123,104,238,.1)" stroke="rgba(123,104,238,.3)"/>
+        <text x="680" y="250" fill="#a899f5" text-anchor="middle" font-size="10">Pulled live ESPN scores to</text>
+        <text x="680" y="266" fill="#a899f5" text-anchor="middle" font-size="10">test predictions vs reality</text>
+
+        <!-- Merge 2 -->
+        <line x1="150" y1="278" x2="150" y2="290" stroke="#00d4aa" stroke-width="1.2"/>
+        <line x1="400" y1="278" x2="400" y2="290" stroke="#00d4aa" stroke-width="1.2"/>
+        <line x1="680" y1="278" x2="680" y2="290" stroke="#7b68ee" stroke-width="1.2"/>
+        <line x1="150" y1="290" x2="680" y2="290" stroke="rgba(255,107,53,.35)" stroke-width="1.2"/>
+        <line x1="400" y1="290" x2="400" y2="306" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-flame)"/>
+
+        <!-- ===== BUILD + TRAIN ===== -->
+        <rect x="170" y="310" width="230" height="44" rx="6" fill="rgba(0,212,170,.1)" stroke="rgba(0,212,170,.25)"/>
+        <text x="285" y="328" fill="#00d4aa" text-anchor="middle" font-size="10">Built name matching (99.3%),</text>
+        <text x="285" y="344" fill="#00d4aa" text-anchor="middle" font-size="10">new feature module, 57 -> 65 cols</text>
+        <text x="920" y="336" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">0:50</text>
+
+        <line x1="400" y1="336" x2="440" y2="336" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-flame)"/>
+
+        <rect x="444" y="310" width="280" height="44" rx="6" fill="rgba(255,107,53,.1)" stroke="rgba(255,107,53,.3)"/>
+        <text x="584" y="328" fill="#ff6b35" text-anchor="middle" font-size="10">30-config hyperparameter sweep:</text>
+        <text x="584" y="344" fill="#ff6b35" text-anchor="middle" font-size="10">XGBoost (12) + LightGBM (12) + Player (6)</text>
+
+        <text x="920" y="372" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">1:10</text>
+
+        <!-- FAILURE -->
+        <line x1="584" y1="354" x2="584" y2="378" stroke="#ff4757" stroke-width="1.5" marker-end="url(#arr-rose)"/>
+
+        <rect x="370" y="382" width="420" height="36" rx="6" fill="rgba(255,71,87,.08)" stroke="rgba(255,71,87,.3)"/>
+        <text x="580" y="405" fill="#ff4757" text-anchor="middle" font-weight="600" font-size="11">Player data made the model worse: 0.054 vs 0.050 Brier</text>
+
+        <!-- ===== HUMAN 2 ===== -->
+        <circle cx="30" cy="442" r="11" fill="#ff4757" opacity=".9"/>
+        <text x="30" y="446" fill="white" text-anchor="middle" font-size="8" font-weight="700">H</text>
+        <text x="50" y="446" fill="#ff8a97" font-size="10" font-style="italic">"Player data should help. Research why it didn't - check Kaggle, academic papers, anything."</text>
+        <text x="920" y="446" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">1:30</text>
+
+        <line x1="400" y1="456" x2="400" y2="474" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-flame)"/>
+
+        <!-- ===== FORK 3: 2 investigation agents ===== -->
+        <line x1="250" y1="478" x2="660" y2="478" stroke="rgba(123,104,238,.3)" stroke-width="1.2"/>
+        <line x1="250" y1="478" x2="250" y2="490" stroke="#7b68ee" stroke-width="1.2" marker-end="url(#arr-iris)"/>
+        <line x1="660" y1="478" x2="660" y2="490" stroke="#7b68ee" stroke-width="1.2" marker-end="url(#arr-iris)"/>
+        <text x="455" y="474" fill="#8899b3" text-anchor="middle" font-size="8" font-family="Space Mono,monospace" letter-spacing=".1em">2 AGENTS IN PARALLEL (~5 min each)</text>
+        <text x="920" y="500" fill="#506380" font-family="Space Mono,monospace" font-size="9" text-anchor="end">1:35</text>
+
+        <rect x="80" y="494" width="340" height="44" rx="6" fill="rgba(123,104,238,.1)" stroke="rgba(123,104,238,.3)"/>
+        <text x="250" y="512" fill="#a899f5" text-anchor="middle" font-size="10">Kaggle winners, KenPom noise analysis,</text>
+        <text x="250" y="528" fill="#a899f5" text-anchor="middle" font-size="10">academic papers (53 tool calls)</text>
+
+        <rect x="480" y="494" width="360" height="44" rx="6" fill="rgba(123,104,238,.1)" stroke="rgba(123,104,238,.3)"/>
+        <text x="660" y="512" fill="#a899f5" text-anchor="middle" font-size="10">Injury announcement dates, NCAA</text>
+        <text x="660" y="528" fill="#a899f5" text-anchor="middle" font-size="10">rules, betting line data (22 calls)</text>
+
+        <!-- Merge 3 -->
+        <line x1="250" y1="538" x2="250" y2="550" stroke="#7b68ee" stroke-width="1.2"/>
+        <line x1="660" y1="538" x2="660" y2="550" stroke="#7b68ee" stroke-width="1.2"/>
+        <line x1="250" y1="550" x2="660" y2="550" stroke="rgba(255,107,53,.35)" stroke-width="1.2"/>
+        <line x1="455" y1="550" x2="455" y2="566" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arr-flame)"/>
+
+        <!-- Final output -->
+        <rect x="175" y="570" width="560" height="30" rx="5" fill="rgba(0,212,170,.08)" stroke="rgba(0,212,170,.2)"/>
+        <text x="455" y="590" fill="#00d4aa" text-anchor="middle" font-size="10.5" font-weight="600">Injury-adjusted predictions + era-marked figures + reports + article pitches</text>
+        <text x="920" y="590" fill="#00d4aa" font-family="Space Mono,monospace" font-size="9" text-anchor="end">~3:00</text>
+
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- ====== HUMAN STEERING ====== -->
+<section class="section">
+  <span class="section-tag reveal">Human In The Loop</span>
+  <h2 class="reveal">The AI executes. The human steers.</h2>
+  <p class="lead reveal">Five moments where a question from the human changed the entire direction. Claude Code ran 12 autonomous agents - but these five sentences shaped what they built.</p>
+
+  <div style="display:grid;gap:1.2rem" class="reveal">
+
+    <div style="display:grid;grid-template-columns:40px 1fr;gap:1rem;align-items:start;padding:1.2rem 1.5rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--rose)">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,71,87,.12);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--rose);font-weight:700">01</div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.2rem">"Find non-obvious, data-driven insights - not generic bracket analysis."</div>
+        <div style="font-size:.75rem;color:var(--txt-dim)">Redirected from standard bracket breakdown to hunting for counterintuitive findings. Led to discovering the momentum myth (r=0.02), the 3-point paradox, and 40 years of unchanged upset rates.</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:40px 1fr;gap:1rem;align-items:start;padding:1.2rem 1.5rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--rose)">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,71,87,.12);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--rose);font-weight:700">02</div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.2rem">"Add player-level data to the model. My team just lost - could individual player stats have predicted the upset?"</div>
+        <div style="font-size:.75rem;color:var(--txt-dim)">A real-world loss became a testable hypothesis. Triggered download of 30,066 player records via Barttorvik API, new feature module, full pipeline rebuild, and retraining across 30 configurations.</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:40px 1fr;gap:1rem;align-items:start;padding:1.2rem 1.5rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--rose)">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,71,87,.12);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--rose);font-weight:700">03</div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.2rem">"Player data should help. Research why it didn't - check Kaggle discussions, academic papers, anything."</div>
+        <div style="font-size:.75rem;color:var(--txt-dim)">Refused to accept a counterintuitive result. Two parallel research agents searched Kaggle winning solutions, KenPom's noise analysis, and academic literature. Finding: no winning solution in the competition's 12-year history has ever used player data.</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:40px 1fr;gap:1rem;align-items:start;padding:1.2rem 1.5rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--rose)">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,71,87,.12);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--rose);font-weight:700">04</div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.2rem">"Could we have used injury data pre-tournament? Were these absences public in time to adjust predictions?"</div>
+        <div style="font-size:.75rem;color:var(--txt-dim)">Pivoted from aggregate player analysis to actionable edge cases. Found all 8 major injuries were public 3-64 days before tip-off. Computed injury-adjusted predictions: Duke dropped from 99.4% to 86.6%.</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:40px 1fr;gap:1rem;align-items:start;padding:1.2rem 1.5rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;border-left:3px solid var(--rose)">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,71,87,.12);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:.65rem;color:var(--rose);font-weight:700">05</div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.2rem">"Limit the analysis window - structural breaks make pre-2020 comparisons misleading."</div>
+        <div style="font-size:.75rem;color:var(--txt-dim)">Identified that transfer portal, NIL, 3PT line move, and shot clock changes represent fundamentally different eras. Regenerated all timeline charts with structural break markers and created modern-era-only analytical figures.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ====== AGENT WAVES ====== -->
+<section class="section">
+  <span class="section-tag reveal">Agent Architecture</span>
+  <h2 class="reveal">40+ agents across 5 sessions</h2>
+  <p class="lead reveal">Across the full project, Claude Code spawned 40+ autonomous agents in parallel waves. Session 1 built the pipeline. Session 2 ran the post-mortem. Here are the key waves from the analysis session.</p>
+
+  <div class="wave-grid">
+
+    <div class="wave reveal">
+      <div class="wave-head">
+        <div class="wave-num mono">1</div>
+        <div class="wave-info"><h3>Research Sprint</h3><p>3 parallel agents exploring the landscape</p></div>
+        <div class="wave-dur">~5 min each (parallel)</div>
+      </div>
+      <div class="wave-agents">
+        <div class="agent-pill research"><span class="a-label">Research</span> Basketball insights (tempo, portal, NIL) <span class="a-output">39 calls</span></div>
+        <div class="agent-pill research"><span class="a-label">Research</span> Ohio State upset + player data sources <span class="a-output">20 calls</span></div>
+        <div class="agent-pill data"><span class="a-label">Analysis</span> Deep data anomalies + 10 figures <span class="a-output">13 calls</span></div>
+      </div>
+    </div>
+
+    <div class="wave reveal reveal-d1">
+      <div class="wave-head">
+        <div class="wave-num mono">2</div>
+        <div class="wave-info"><h3>Player Data Acquisition</h3><p>3 parallel agents sourcing + auditing data</p></div>
+        <div class="wave-dur">~4 min each (parallel)</div>
+      </div>
+      <div class="wave-agents">
+        <div class="agent-pill data"><span class="a-label">Data</span> Barttorvik API: 30K players, 6 seasons <span class="a-output">6 CSVs</span></div>
+        <div class="agent-pill research"><span class="a-label">Research</span> Live ESPN scores + injury timeline <span class="a-output">20 calls</span></div>
+        <div class="agent-pill data"><span class="a-label">Audit</span> All 67 external files checked <span class="a-output">79 calls</span></div>
+      </div>
+    </div>
+
+    <div class="wave reveal reveal-d2">
+      <div class="wave-head">
+        <div class="wave-num mono">3</div>
+        <div class="wave-info"><h3>Investigation: Why Did Player Data Fail?</h3><p>2 parallel agents researching the unexpected result</p></div>
+        <div class="wave-dur">~5 min</div>
+      </div>
+      <div class="wave-agents">
+        <div class="agent-pill research"><span class="a-label">Research</span> Kaggle history + KenPom noise demo + papers <span class="a-output">53 calls</span></div>
+        <div class="agent-pill research"><span class="a-label">Research</span> Injury data availability + NCAA rules <span class="a-output">22 calls</span></div>
+      </div>
+    </div>
+
+    <div class="wave reveal reveal-d3">
+      <div class="wave-head">
+        <div class="wave-num mono">4</div>
+        <div class="wave-info"><h3>Final Deliverables</h3><p>2 parallel agents producing outputs</p></div>
+        <div class="wave-dur">~6 min</div>
+      </div>
+      <div class="wave-agents">
+        <div class="agent-pill model"><span class="a-label">Model</span> Injury-adjusted predictions for 7 matchups</div>
+        <div class="agent-pill visual"><span class="a-label">Visual</span> 5 era-marked figures regenerated</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ====== CALLOUT ====== -->
+<section class="section">
+  <div class="callout reveal">
+    <blockquote>"The AI builds the pipeline.<br>The analyst <em>asks the right questions.</em>"</blockquote>
+    <div class="attr">The model scored 0.050 Brier. It gave Ohio State 82%. It gave Duke 99.4% while they were missing two starters.<br>The frontier isn't more features - it's knowing when your features are stale.</div>
+  </div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<footer>
+  Built by <a href="https://www.southshore.llc/">South Shore Analytics</a> using Claude Code &middot; March Madness 2026
+</footer>
+
+<script>
+// Scroll-triggered reveal
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

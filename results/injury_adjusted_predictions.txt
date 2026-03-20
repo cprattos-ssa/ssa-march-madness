@@ -1,0 +1,50 @@
+INJURY-ADJUSTED PREDICTIONS - 2026 NCAA TOURNAMENT
+======================================================================
+Generated: 2026-03-19
+Adjustment strength: 1.0
+
+INJURY ADJUSTMENTS
+----------------------------------------------------------------------
+Matchup                                 Orig      Adj   Change   WAR Lost
+----------------------------------------------------------------------
+Duke vs Siena                         0.9943   0.8661  -0.1282       7.60
+    OUT: Caleb Foster
+    OUT: Patrick Ngongba
+North Carolina vs VCU                 0.3920   0.4006  +0.0086       2.40
+    OUT: Caleb Wilson
+Louisville vs South Florida           0.3420   0.3493  +0.0074       2.20
+    OUT: Mikel Brown
+Alabama vs Hofstra                    0.8565   0.8342  -0.0223       2.50
+    OUT: Aden Holloway
+Texas Tech vs Akron                   0.7267   0.7068  -0.0199       3.30
+    OUT: JT Toppin
+BYU vs Texas                          0.8828   0.8573  -0.0255       2.80
+    OUT: Richie Saunders
+Gonzaga vs Kennesaw                   0.9478   0.9027  -0.0451       3.90
+    OUT: Braden Huff
+
+BRIER SCORE COMPARISON (known results)
+----------------------------------------------------------------------
+Game                                Actual     Orig      Adj     B_orig      B_adj     Improv
+----------------------------------------------------------------------
+TCU def. Ohio St                         0   0.8193   0.8193   0.671287   0.671287        N/A
+Nebraska def. Troy                       1   0.9391   0.9391   0.003713   0.003713        N/A
+Louisville def. South Florida            1   0.3420   0.3493   0.433015   0.423374  +0.009640
+Wisconsin def. High Point                0   0.0429   0.0429   0.001844   0.001844        N/A
+
+Total Brier (original):  1.109859
+Total Brier (adjusted):  1.100219
+EXACT IMPROVEMENT:       +0.009640
+Avg Brier (original):    0.277465
+Avg Brier (adjusted):    0.275055
+
+Injury-affected games (1):
+  Brier original:  0.433015
+  Brier adjusted:  0.423374
+  Improvement:     +0.009640
+
+OHIO STATE VS TCU - STAR PLAYER ANALYSIS
+----------------------------------------------------------------------
+Original P(Ohio St wins): 0.8193
+TCU total WAR: 25.60
+Ohio State total WAR: 37.70
