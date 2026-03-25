@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 2: Post-Mortem Flow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #080c14;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .canvas {
+    width: 1200px;
+    min-height: 800px;
+    background: #0c1222;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #1a2744;
+  }
+
+  .canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .canvas::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.008) 2px,
+      rgba(255,255,255,0.008) 4px
+    );
+    pointer-events: none;
+  }
+
+  .header {
+    padding: 28px 48px 0;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #e2e8f0;
+    letter-spacing: -0.3px;
+  }
+
+  .header p {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 400;
+  }
+
+  .header .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    padding: 4px 12px;
+    letter-spacing: 0.3px;
+  }
+
+  .flow-area {
+    padding: 16px 48px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  svg.flow {
+    width: 100%;
+    height: 680px;
+  }
+
+  .node-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    fill: #e2e8f0;
+  }
+
+  .node-label-lg {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    fill: #e2e8f0;
+  }
+
+  .node-sublabel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    fill: #64748b;
+  }
+
+  .node-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+
+  .node-metric {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .node-metric-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .result-footer {
+    margin: 8px 48px 24px;
+    padding: 12px 20px;
+    background: rgba(245, 158, 11, 0.05);
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+  }
+
+  .result-footer .conclusion {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e2e8f0;
+  }
+
+  .result-footer .conclusion em {
+    font-style: normal;
+    color: #fbbf24;
+    font-weight: 600;
+  }
+
+  .result-footer .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #475569;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="header">
+      <div>
+        <h1>Session 2: Post-Mortem Analysis</h1>
+        <p>Player data experiment + injury analysis</p>
+      </div>
+      <div class="badge">~18 agents / ~6 hours</div>
+    </div>
+
+    <div class="flow-area">
+      <svg class="flow" viewBox="0 0 1100 680">
+        <defs>
+          <!-- Flow band gradients (vertical, top-to-bottom) -->
+          <linearGradient id="g-trigger" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.08"/>
+          </linearGradient>
+          <linearGradient id="g-branch-l" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.20"/>
+          </linearGradient>
+          <linearGradient id="g-branch-c" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.10"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.18"/>
+          </linearGradient>
+          <linearGradient id="g-branch-r" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.20"/>
+          </linearGradient>
+          <linearGradient id="g-experiment" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.08"/>
+          </linearGradient>
+          <linearGradient id="g-fail" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.20"/>
+            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.06"/>
+          </linearGradient>
+          <linearGradient id="g-insight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.08"/>
+          </linearGradient>
+          <linearGradient id="g-out-l" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.20"/>
+          </linearGradient>
+          <linearGradient id="g-out-r" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.20"/>
+          </linearGradient>
+          <linearGradient id="g-final" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity="0.10"/>
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.12"/>
+          </linearGradient>
+
+          <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+          <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- ============================================================ -->
+        <!-- ROW 1: Trigger - Day 1 Results                              -->
+        <!-- ============================================================ -->
+        <rect x="300" y="0" width="2" height="55" fill="#ef4444" opacity="0.5" rx="1"/>
+        <text x="316" y="14" class="node-tag" fill="#ef4444">TRIGGER</text>
+        <text x="316" y="30" class="node-label-lg" fill="#fca5a5">Tournament starts. Model misses key upsets.</text>
+        <text x="316" y="46" class="node-sublabel">3 games at 90%+ confidence for the wrong team - 64% of Day 1 error</text>
+
+        <!-- Metric cards on the left -->
+        <rect x="20" y="2" width="120" height="48" rx="2" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.2)" stroke-width="1"/>
+        <text x="38" y="28" class="node-metric" fill="#f87171" style="font-size:26px">5</text>
+        <text x="66" y="28" class="node-metric-sm" fill="#94a3b8">/16 wrong</text>
+        <text x="38" y="42" class="node-sublabel" fill="#64748b" style="font-size:9px">Day 1 misses</text>
+
+        <rect x="156" y="2" width="120" height="48" rx="2" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.2)" stroke-width="1"/>
+        <text x="170" y="28" class="node-metric" fill="#f87171" style="font-size:20px">0.916</text>
+        <text x="170" y="42" class="node-sublabel" fill="#64748b" style="font-size:9px">worst Brier score</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Trigger -> Question                                   -->
+        <!-- ============================================================ -->
+        <path d="M 480 55 C 480 65, 540 68, 540 75
+                 L 560 75
+                 C 560 68, 520 65, 520 55 Z"
+              fill="url(#g-trigger)"/>
+
+        <!-- ROW 2: Question -->
+        <rect x="350" y="78" width="400" height="32" rx="2"
+              fill="none" stroke="#475569" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="550" y="98" class="node-sublabel" fill="#94a3b8" text-anchor="middle"
+              style="font-size:11px; font-style:italic">
+          Could individual player stats have predicted these upsets?
+        </text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Question -> Three branches (fan out)                  -->
+        <!-- ============================================================ -->
+        <!-- Left branch band -->
+        <path d="M 460 110 C 460 125, 200 130, 200 145
+                 L 240 145
+                 C 240 130, 500 125, 500 110 Z"
+              fill="url(#g-branch-l)"/>
+        <path d="M 460 110 C 460 125, 200 130, 200 145"
+              fill="none" stroke="#6366f1" stroke-width="0.8" opacity="0.3"/>
+
+        <!-- Center branch band -->
+        <path d="M 520 110 C 520 122, 520 130, 520 145
+                 L 580 145
+                 C 580 130, 580 122, 580 110 Z"
+              fill="url(#g-branch-c)"/>
+
+        <!-- Right branch band -->
+        <path d="M 600 110 C 600 125, 880 130, 880 145
+                 L 920 145
+                 C 920 130, 640 125, 640 110 Z"
+              fill="url(#g-branch-r)"/>
+        <path d="M 640 110 C 640 125, 920 130, 920 145"
+              fill="none" stroke="#6366f1" stroke-width="0.8" opacity="0.3"/>
+
+        <!-- ============================================================ -->
+        <!-- ROW 3: Three parallel nodes                                 -->
+        <!-- ============================================================ -->
+        <!-- Left: Pull player data -->
+        <rect x="100" y="148" width="2" height="62" fill="#6366f1" opacity="0.6" rx="1"/>
+        <text x="116" y="160" class="node-tag" fill="#6366f1">DATA</text>
+        <text x="116" y="176" class="node-label">Pull player data</text>
+        <text x="116" y="192" class="node-sublabel">Barttorvik API</text>
+        <text x="116" y="205" class="node-metric" fill="#8b5cf6" style="font-size:16px">30K</text>
+        <text x="163" y="205" class="node-metric-sm" fill="#64748b">records, 6 seasons</text>
+
+        <!-- Center: Audit features -->
+        <rect x="450" y="148" width="2" height="62" fill="#6366f1" opacity="0.6" rx="1"/>
+        <text x="466" y="160" class="node-tag" fill="#6366f1">AUDIT</text>
+        <text x="466" y="176" class="node-label">Audit existing features</text>
+        <text x="466" y="192" class="node-sublabel">67 files checked</text>
+        <text x="466" y="205" class="node-sublabel" fill="#94a3b8">No player data found</text>
+
+        <!-- Right: Pull live scores -->
+        <rect x="800" y="148" width="2" height="62" fill="#6366f1" opacity="0.6" rx="1"/>
+        <text x="816" y="160" class="node-tag" fill="#6366f1">VALIDATE</text>
+        <text x="816" y="176" class="node-label">Pull live scores</text>
+        <text x="816" y="192" class="node-sublabel">ESPN results vs</text>
+        <text x="816" y="205" class="node-sublabel">model predictions</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Three branches merge -> Experiment                    -->
+        <!-- ============================================================ -->
+        <!-- Left merge -->
+        <path d="M 200 215 C 200 228, 460 235, 460 248
+                 L 500 248
+                 C 500 235, 240 228, 240 215 Z"
+              fill="url(#g-experiment)"/>
+        <!-- Center merge -->
+        <path d="M 500 215 C 500 228, 520 232, 520 248
+                 L 580 248
+                 C 580 232, 560 228, 560 215 Z"
+              fill="url(#g-experiment)"/>
+        <!-- Right merge -->
+        <path d="M 860 215 C 860 228, 620 235, 620 248
+                 L 660 248
+                 C 660 235, 900 228, 900 215 Z"
+              fill="url(#g-experiment)"/>
+
+        <!-- ============================================================ -->
+        <!-- ROW 4: Experiment                                           -->
+        <!-- ============================================================ -->
+        <rect x="300" y="252" width="2" height="58" fill="#8b5cf6" opacity="0.6" rx="1"/>
+        <text x="316" y="264" class="node-tag" fill="#8b5cf6">EXPERIMENT</text>
+        <text x="316" y="280" class="node-label-lg">Engineer 8 player features, retrain 30 model configs</text>
+        <text x="316" y="296" class="node-sublabel">Team WAR, Star WAR, Sr%, experience mix, roster height, star dependency</text>
+        <text x="316" y="308" class="node-sublabel" fill="#94a3b8">57 features -> 65 features per team-season</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Experiment -> Failed Result                           -->
+        <!-- Dashed red band indicating failure                          -->
+        <!-- ============================================================ -->
+        <path d="M 490 314 C 490 325, 490 332, 490 345
+                 L 530 345
+                 C 530 332, 530 325, 530 314 Z"
+              fill="url(#g-fail)"/>
+        <path d="M 510 314 C 510 325, 510 332, 510 345"
+              fill="none" stroke="#ef4444" stroke-width="1" opacity="0.35" stroke-dasharray="4 3"/>
+
+        <!-- X marker -->
+        <text x="550" y="334" style="font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; fill:#ef4444; opacity:0.7;">&#x2717;</text>
+
+        <!-- ============================================================ -->
+        <!-- ROW 5: Failed Result                                        -->
+        <!-- ============================================================ -->
+        <rect x="260" y="348" width="580" height="56" rx="2"
+              fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.25)" stroke-width="1.5"/>
+        <rect x="260" y="348" width="3" height="56" fill="#ef4444" opacity="0.7"/>
+        <text x="278" y="364" class="node-tag" fill="#ef4444">RESULT</text>
+        <text x="278" y="380" class="node-label" fill="#fca5a5">Brier score: 0.0503 -> 0.0544. Every configuration got worse.</text>
+        <text x="278" y="396" class="node-sublabel">Player features correlated below r = 0.12. Not one cracked the top 15 in feature importance.</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Failed Result -> Insight                              -->
+        <!-- ============================================================ -->
+        <path d="M 490 404 C 490 415, 490 422, 490 434
+                 L 530 434
+                 C 530 422, 530 415, 530 404 Z"
+              fill="url(#g-insight)"/>
+
+        <!-- ============================================================ -->
+        <!-- ROW 6: The Irony / Insight                                  -->
+        <!-- ============================================================ -->
+        <rect x="220" y="438" width="660" height="60" rx="2"
+              fill="rgba(245,158,11,0.06)" stroke="rgba(245,158,11,0.3)" stroke-width="1.5"
+              stroke-dasharray="6 3" filter="url(#glow-amber)"/>
+        <rect x="220" y="438" width="3" height="60" fill="#f59e0b" opacity="0.8"/>
+        <text x="240" y="454" class="node-tag" fill="#f59e0b">DISCOVERY</text>
+        <text x="240" y="472" class="node-label-lg" fill="#fbbf24">Features that hurt the model are exactly what flagged the upsets.</text>
+        <text x="240" y="490" class="node-sublabel" fill="#a16207">Team WAR predicted the upset winner in 7 of 12 wrong picks. The model doesn't need them. The edge cases do.</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Insight -> Two branches (fan out)                     -->
+        <!-- ============================================================ -->
+        <!-- Left branch -->
+        <path d="M 420 498 C 420 512, 260 518, 260 532
+                 L 310 532
+                 C 310 518, 460 512, 460 498 Z"
+              fill="url(#g-out-l)"/>
+        <path d="M 420 498 C 420 512, 260 518, 260 532"
+              fill="none" stroke="#10b981" stroke-width="0.8" opacity="0.3"/>
+
+        <!-- Right branch -->
+        <path d="M 640 498 C 640 512, 800 518, 800 532
+                 L 850 532
+                 C 850 518, 680 512, 680 498 Z"
+              fill="url(#g-out-r)"/>
+        <path d="M 680 498 C 680 512, 850 518, 850 532"
+              fill="none" stroke="#10b981" stroke-width="0.8" opacity="0.3"/>
+
+        <!-- ============================================================ -->
+        <!-- ROW 7: Two output nodes                                     -->
+        <!-- ============================================================ -->
+        <!-- Left: Research & Validation -->
+        <rect x="120" y="536" width="2" height="62" fill="#10b981" opacity="0.6" rx="1"/>
+        <text x="136" y="548" class="node-tag" fill="#10b981">VALIDATED</text>
+        <text x="136" y="564" class="node-label">Research & validation</text>
+        <text x="136" y="580" class="node-sublabel">No publicly documented winning</text>
+        <text x="136" y="592" class="node-sublabel">solution has used player features.</text>
+
+        <!-- Right: Injury Analysis -->
+        <rect x="700" y="536" width="2" height="62" fill="#10b981" opacity="0.6" rx="1"/>
+        <text x="716" y="548" class="node-tag" fill="#10b981">VALIDATED</text>
+        <text x="716" y="564" class="node-label">Injury analysis</text>
+        <text x="716" y="580" class="node-sublabel">7 players injured pre-tipoff.</text>
+        <text x="716" y="592" class="node-sublabel">Duke, Gonzaga, BYU impact quantified.</text>
+
+        <!-- Side metrics for outputs -->
+        <rect x="380" y="545" width="140" height="40" rx="2"
+              fill="rgba(16,185,129,0.05)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+        <text x="392" y="562" class="node-sublabel" fill="#94a3b8" style="font-size:9px">PROBABILITY CLIPPING</text>
+        <text x="392" y="577" class="node-sublabel" fill="#10b981" style="font-size:10px">Cap at [2.5%, 97.5%]</text>
+
+        <rect x="540" y="545" width="140" height="40" rx="2"
+              fill="rgba(16,185,129,0.05)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+        <text x="552" y="562" class="node-sublabel" fill="#94a3b8" style="font-size:9px">ELO OVERWEIGHTING</text>
+        <text x="552" y="577" class="node-sublabel" fill="#10b981" style="font-size:10px">12/12 misses: Elo favored pick</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Two branches merge -> Final output                    -->
+        <!-- ============================================================ -->
+        <path d="M 250 602 C 250 616, 460 622, 460 636
+                 L 500 636
+                 C 500 622, 290 616, 290 602 Z"
+              fill="url(#g-final)"/>
+        <path d="M 810 602 C 810 616, 600 622, 600 636
+                 L 640 636
+                 C 640 622, 850 616, 850 602 Z"
+              fill="url(#g-final)"/>
+
+        <!-- ============================================================ -->
+        <!-- ROW 8: Final output                                         -->
+        <!-- ============================================================ -->
+        <rect x="280" y="640" width="540" height="36" rx="2"
+              fill="rgba(56,189,248,0.05)" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+        <text x="550" y="662" class="node-label" text-anchor="middle" fill="#e2e8f0" style="font-size:12px">
+          19 figures + game-by-game analysis + injury-adjusted predictions
+        </text>
+      </svg>
+    </div>
+
+    <div class="result-footer">
+      <div class="conclusion">
+        <em>Player data is noise in aggregate, signal at the edges, and critical for injury adjustment.</em>
+      </div>
+      <div class="meta">session 2 / march 2026</div>
+    </div>
+  </div>
+</body>
+</html>

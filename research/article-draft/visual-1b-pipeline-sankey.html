@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Flow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #080c14;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .canvas {
+    width: 1200px;
+    min-height: 600px;
+    background: #0c1222;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #1a2744;
+  }
+
+  /* Subtle noise texture */
+  .canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  /* Horizontal scan lines */
+  .canvas::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.008) 2px,
+      rgba(255,255,255,0.008) 4px
+    );
+    pointer-events: none;
+  }
+
+  .header {
+    padding: 32px 48px 0;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: #e2e8f0;
+    letter-spacing: -0.3px;
+  }
+
+  .header p {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 400;
+  }
+
+  .header .agents-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    padding: 4px 12px;
+    letter-spacing: 0.3px;
+  }
+
+  /* SVG Flow Area */
+  .flow-area {
+    padding: 24px 48px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  svg.flow {
+    width: 100%;
+    height: 380px;
+  }
+
+  /* Node labels */
+  .node-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    fill: #e2e8f0;
+  }
+
+  .node-sublabel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    fill: #64748b;
+  }
+
+  .node-metric {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    fill: #38bdf8;
+  }
+
+  .node-metric-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* Session bar */
+  .session-bar {
+    margin: 0 48px;
+    display: flex;
+    gap: 2px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .session-segment {
+    height: 3px;
+    position: relative;
+  }
+
+  .session-segment.s1 {
+    flex: 4;
+    background: linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6, #3b82f6);
+  }
+
+  .session-segment.s2 {
+    flex: 1;
+    background: #10b981;
+  }
+
+  .session-segment .seg-label {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  /* Result footer */
+  .result-footer {
+    margin: 32px 48px 28px;
+    padding: 14px 20px;
+    background: rgba(56, 189, 248, 0.05);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+  }
+
+  .result-footer .winner {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  .result-footer .winner em {
+    font-style: normal;
+    font-family: 'JetBrains Mono', monospace;
+    color: #38bdf8;
+    font-size: 13px;
+  }
+
+  .result-footer .ceiling {
+    font-size: 11px;
+    color: #475569;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="header">
+      <div>
+        <h1>The Prediction Pipeline</h1>
+        <p>Data flow from ingestion to tournament predictions</p>
+      </div>
+      <div class="agents-badge">40+ agents in parallel</div>
+    </div>
+
+    <div class="flow-area">
+      <svg class="flow" viewBox="0 0 1100 380">
+        <defs>
+          <!-- Gradients for flow bands -->
+          <linearGradient id="g-ingest" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.25"/>
+          </linearGradient>
+          <linearGradient id="g-feat" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0.25"/>
+          </linearGradient>
+          <linearGradient id="g-model-top" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.18"/>
+          </linearGradient>
+          <linearGradient id="g-model-lgbm" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.15"/>
+            <stop offset="50%" stop-color="#d97706" stop-opacity="0.20"/>
+            <stop offset="100%" stop-color="#d97706" stop-opacity="0.28"/>
+          </linearGradient>
+          <linearGradient id="g-converge-fade" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.10"/>
+            <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.04"/>
+          </linearGradient>
+          <linearGradient id="g-converge-lgbm" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#d97706" stop-opacity="0.22"/>
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.20"/>
+          </linearGradient>
+          <linearGradient id="g-postmortem" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.18"/>
+          </linearGradient>
+
+          <!-- Subtle glow filter for LightGBM winner -->
+          <filter id="glow-winner" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+          <filter id="glow-winner-soft" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- ============================================================ -->
+        <!-- COLUMN 1: Data Ingestion                                     -->
+        <!-- ============================================================ -->
+        <rect x="0" y="20" width="2" height="140" fill="#3b82f6" opacity="0.6" rx="1"/>
+        <text x="16" y="42" class="node-label">Data Ingestion</text>
+        <text x="16" y="60" class="node-sublabel">Kaggle historical data</text>
+        <text x="16" y="74" class="node-sublabel">Barttorvik efficiency</text>
+        <text x="16" y="88" class="node-sublabel">Coaching records</text>
+        <text x="16" y="102" class="node-sublabel">Player statistics</text>
+        <text x="16" y="128" class="node-metric" fill="#38bdf8">101</text>
+        <text x="68" y="128" class="node-metric-sm" fill="#64748b">files</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Ingestion -> Features                                  -->
+        <!-- Wide filled band with top/bottom edges                       -->
+        <!-- ============================================================ -->
+        <!-- Filled band (top edge to bottom edge) -->
+        <path d="M 155 62 C 185 62, 200 72, 235 72
+                 L 235 118
+                 C 200 118, 185 128, 155 128 Z"
+              fill="url(#g-ingest)"/>
+        <!-- Top edge stroke -->
+        <path d="M 155 62 C 185 62, 200 72, 235 72"
+              fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+        <!-- Bottom edge stroke -->
+        <path d="M 155 128 C 185 128, 200 118, 235 118"
+              fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.35"/>
+
+        <!-- ============================================================ -->
+        <!-- COLUMN 2: Feature Engineering                                -->
+        <!-- ============================================================ -->
+        <rect x="240" y="40" width="2" height="100" fill="#6366f1" opacity="0.6" rx="1"/>
+        <text x="256" y="62" class="node-label">Feature Engineering</text>
+        <text x="256" y="80" class="node-sublabel">Elo, efficiency, SOS</text>
+        <text x="256" y="94" class="node-sublabel">Four factors, coaching</text>
+        <text x="256" y="120" class="node-metric" fill="#8b5cf6">57</text>
+        <text x="290" y="120" class="node-metric-sm" fill="#64748b">features / team</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Features -> Models (fan-out into 5 parallel tracks)    -->
+        <!-- Smooth Sankey-style bands that splay out evenly              -->
+        <!-- ============================================================ -->
+
+        <!-- Band 1: Features -> Logistic Regression (y=60) -->
+        <path d="M 420 68 C 450 68, 465 48, 498 48
+                 L 498 68
+                 C 465 68, 450 80, 420 80 Z"
+              fill="url(#g-model-top)" />
+        <path d="M 420 68 C 450 68, 465 48, 498 48"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+        <path d="M 420 80 C 450 80, 465 68, 498 68"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+
+        <!-- Band 2: Features -> Bradley-Terry (y=100) -->
+        <path d="M 420 80 C 450 80, 465 80, 498 86
+                 L 498 106
+                 C 465 100, 450 92, 420 92 Z"
+              fill="url(#g-model-top)" />
+        <path d="M 420 80 C 450 80, 465 80, 498 86"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+        <path d="M 420 92 C 450 92, 465 100, 498 106"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+
+        <!-- Band 3: Features -> XGBoost (y=140) -->
+        <path d="M 420 92 C 450 92, 465 118, 498 124
+                 L 498 144
+                 C 465 138, 450 104, 420 104 Z"
+              fill="url(#g-model-top)" />
+        <path d="M 420 92 C 450 92, 465 118, 498 124"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+        <path d="M 420 104 C 450 104, 465 138, 498 144"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+
+        <!-- Band 4: Features -> Neural Network (y=180) -->
+        <path d="M 420 104 C 450 104, 465 156, 498 164
+                 L 498 184
+                 C 465 176, 450 116, 420 116 Z"
+              fill="url(#g-model-top)" />
+        <path d="M 420 104 C 450 104, 465 156, 498 164"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+        <path d="M 420 116 C 450 116, 465 176, 498 184"
+              fill="none" stroke="#8b5cf6" stroke-width="0.8" opacity="0.25"/>
+
+        <!-- Band 5: Features -> LightGBM (y=220) - winner highlight -->
+        <path d="M 420 116 C 455 116, 465 196, 498 204
+                 L 498 230
+                 C 465 222, 455 130, 420 130 Z"
+              fill="url(#g-model-lgbm)" filter="url(#glow-winner)"/>
+        <path d="M 420 116 C 455 116, 465 196, 498 204"
+              fill="none" stroke="#d97706" stroke-width="1" opacity="0.35"/>
+        <path d="M 420 130 C 455 130, 465 222, 498 230"
+              fill="none" stroke="#d97706" stroke-width="1" opacity="0.35"/>
+
+        <!-- ============================================================ -->
+        <!-- COLUMN 3: Model Training                                     -->
+        <!-- ============================================================ -->
+        <rect x="500" y="40" width="2" height="200" fill="#8b5cf6" opacity="0.4" rx="1"/>
+        <text x="516" y="42" class="node-label">Model Training</text>
+
+        <text x="516" y="66" class="node-sublabel" fill="#64748b">Logistic Regression</text>
+        <text x="516" y="106" class="node-sublabel" fill="#64748b">Bradley-Terry (Elo)</text>
+        <text x="516" y="146" class="node-sublabel" fill="#64748b">XGBoost</text>
+        <text x="516" y="186" class="node-sublabel" fill="#64748b">Neural Network</text>
+        <text x="516" y="226" class="node-sublabel" fill="#d97706" style="font-size:11px;font-weight:600">LightGBM</text>
+        <text x="596" y="226" class="node-sublabel" fill="#d97706" style="font-size:10px">&#x2190; winner</text>
+
+        <text x="516" y="256" class="node-metric-sm" fill="#64748b">30+ configurations tested</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Models -> Calibration (converge)                       -->
+        <!-- Non-winners fade out, LightGBM carries through               -->
+        <!-- ============================================================ -->
+
+        <!-- Band 1: Logistic Regression -> converge (faded) -->
+        <path d="M 700 48 C 720 48, 730 130, 758 138
+                 L 758 150
+                 C 730 142, 720 62, 700 62 Z"
+              fill="url(#g-converge-fade)" />
+
+        <!-- Band 2: Bradley-Terry -> converge (faded) -->
+        <path d="M 700 88 C 720 88, 730 134, 758 140
+                 L 758 154
+                 C 730 148, 720 102, 700 102 Z"
+              fill="url(#g-converge-fade)" />
+
+        <!-- Band 3: XGBoost -> converge (faded) -->
+        <path d="M 700 128 C 720 128, 730 140, 758 144
+                 L 758 158
+                 C 730 154, 720 142, 700 142 Z"
+              fill="url(#g-converge-fade)" />
+
+        <!-- Band 4: Neural Network -> converge (faded) -->
+        <path d="M 700 168 C 720 168, 730 152, 758 150
+                 L 758 164
+                 C 730 166, 720 182, 700 182 Z"
+              fill="url(#g-converge-fade)" />
+
+        <!-- Band 5: LightGBM -> converge (winner, prominent) -->
+        <path d="M 700 208 C 722 208, 735 170, 758 162
+                 L 758 178
+                 C 735 186, 722 228, 700 228 Z"
+              fill="url(#g-converge-lgbm)" filter="url(#glow-winner)"/>
+        <path d="M 700 208 C 722 208, 735 170, 758 162"
+              fill="none" stroke="#d97706" stroke-width="0.8" opacity="0.30"/>
+        <path d="M 700 228 C 722 228, 735 186, 758 178"
+              fill="none" stroke="#d97706" stroke-width="0.8" opacity="0.30"/>
+
+        <!-- ============================================================ -->
+        <!-- COLUMN 4: Calibration & Submission                           -->
+        <!-- ============================================================ -->
+        <rect x="760" y="100" width="2" height="80" fill="#3b82f6" opacity="0.6" rx="1"/>
+        <text x="776" y="122" class="node-label">Calibration</text>
+        <text x="776" y="138" class="node-sublabel">& Submission</text>
+        <text x="776" y="166" class="node-metric" fill="#38bdf8" style="font-size:18px">132K</text>
+        <text x="840" y="166" class="node-metric-sm" fill="#64748b">matchups</text>
+
+        <!-- ============================================================ -->
+        <!-- FLOW: Calibration -> Post-Mortem                             -->
+        <!-- Dashed exploration line with filled underlay                  -->
+        <!-- ============================================================ -->
+        <path d="M 898 140 C 922 140, 935 258, 958 264
+                 L 958 282
+                 C 935 276, 922 160, 898 160 Z"
+              fill="url(#g-postmortem)" />
+        <path d="M 898 150 C 925 150, 938 268, 958 273"
+              fill="none" stroke="#10b981" stroke-width="1" opacity="0.40"
+              stroke-dasharray="6 4"/>
+
+        <!-- ============================================================ -->
+        <!-- COLUMN 5: Post-Mortem                                        -->
+        <!-- ============================================================ -->
+        <rect x="960" y="240" width="2" height="100" fill="#10b981" opacity="0.6" rx="1"/>
+        <text x="976" y="262" class="node-label">Post-Mortem</text>
+        <text x="976" y="282" class="node-sublabel">30K player records</text>
+        <text x="976" y="296" class="node-sublabel">Injury analysis</text>
+        <text x="976" y="322" class="node-metric" fill="#10b981" style="font-size:18px">19</text>
+        <text x="1008" y="322" class="node-metric-sm" fill="#64748b">figures</text>
+
+        <!-- ============================================================ -->
+        <!-- Result box                                                   -->
+        <!-- ============================================================ -->
+        <rect x="760" y="300" width="155" height="44" rx="2"
+              fill="rgba(56, 189, 248, 0.03)" stroke="#38bdf8" stroke-width="1" opacity="0.3"/>
+        <text x="770" y="318" class="node-sublabel" fill="#94a3b8" style="font-size:9px">BRIER SCORE</text>
+        <text x="770" y="336" class="node-metric" style="font-size:20px">0.050</text>
+      </svg>
+    </div>
+
+    <div class="session-bar">
+      <div class="session-segment s1">
+        <div class="seg-label">Session 1: Pipeline Build</div>
+      </div>
+      <div class="session-segment s2">
+        <div class="seg-label">Session 2</div>
+      </div>
+    </div>
+
+    <div class="result-footer">
+      <div class="winner">Winner: <em>LightGBM</em> - 0.050 Brier score</div>
+      <div class="ceiling">Realistic competition ceiling: 0.04 - 0.06</div>
+    </div>
+  </div>
+</body>
+</html>

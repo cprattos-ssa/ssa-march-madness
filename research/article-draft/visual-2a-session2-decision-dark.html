@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 2: Decision Flow (Dark)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: #080c14;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .canvas {
+    width: 1200px;
+    min-height: 780px;
+    background: #0e1525;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #1a2744;
+    padding: 36px 56px 32px;
+  }
+
+  .canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .content { position: relative; z-index: 1; }
+
+  .title {
+    font-family: 'Source Serif 4', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: -0.4px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #475569;
+    margin-top: 2px;
+    margin-bottom: 24px;
+  }
+
+  /* Generic node styles */
+  .node {
+    padding: 14px 20px;
+    position: relative;
+    border: 1.5px solid;
+    border-radius: 3px;
+  }
+
+  .node-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.3;
+  }
+
+  .node-desc {
+    font-size: 11px;
+    color: #8896ab;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  .node-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    position: absolute;
+    top: -9px;
+    left: 16px;
+    background: #0e1525;
+    padding: 0 6px;
+  }
+
+  /* Specific node types */
+  .node-trigger {
+    border-color: #7f1d1d;
+    background: rgba(153, 27, 27, 0.12);
+    max-width: 680px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.06);
+  }
+  .node-trigger .node-tag { color: #f87171; }
+  .node-trigger .node-title { color: #fca5a5; }
+  .node-trigger .node-desc { color: #dc8a8a; }
+
+  .node-question {
+    border-color: #334155;
+    background: rgba(30, 41, 59, 0.5);
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+    border-style: dashed;
+  }
+  .node-question .node-title {
+    font-style: italic;
+    font-weight: 500;
+    color: #94a3b8;
+  }
+
+  .node-action {
+    border-color: #312e81;
+    background: rgba(67, 56, 202, 0.1);
+    flex: 1;
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.05);
+  }
+  .node-action .node-tag { color: #a5b4fc; }
+  .node-action .node-title { color: #c7d2fe; }
+  .node-action .node-desc { color: #8896ab; }
+
+  .node-process {
+    border-color: #1e3a5f;
+    background: rgba(37, 99, 235, 0.08);
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.06);
+  }
+  .node-process .node-tag { color: #60a5fa; }
+  .node-process .node-title { color: #93c5fd; }
+  .node-process .node-desc { color: #8896ab; }
+
+  .node-fail {
+    border-color: #7f1d1d;
+    background: rgba(153, 27, 27, 0.12);
+    max-width: 680px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.06);
+  }
+  .node-fail .node-tag { color: #f87171; }
+  .node-fail .node-title { color: #fca5a5; }
+  .node-fail .node-desc { color: #dc8a8a; }
+
+  .node-insight {
+    border-color: #78350f;
+    border-style: dashed;
+    border-width: 2px;
+    background: rgba(217, 119, 6, 0.08);
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    box-shadow: 0 0 24px rgba(251, 191, 36, 0.05);
+  }
+  .node-insight .node-tag { color: #fbbf24; }
+  .node-insight .node-title { color: #fcd34d; }
+  .node-insight .node-desc { color: #d4a84b; }
+
+  .node-output {
+    border-color: #064e3b;
+    background: rgba(5, 150, 105, 0.08);
+    flex: 1;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.05);
+  }
+  .node-output .node-tag { color: #34d399; }
+  .node-output .node-title { color: #6ee7b7; }
+  .node-output .node-desc { color: #8896ab; }
+
+  .node-result {
+    border-color: #1e3a5f;
+    background: rgba(37, 99, 235, 0.08);
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.06);
+  }
+  .node-result .node-title { color: #93c5fd; }
+
+  /* Layout helpers */
+  .row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .connector {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0;
+  }
+
+  .connector svg {
+    width: 2px;
+    height: 20px;
+    overflow: visible;
+  }
+
+  .connector-line {
+    stroke: #2d3f5e;
+    stroke-width: 1.5;
+  }
+
+  .connector-arrow {
+    fill: #2d3f5e;
+  }
+
+  .connector-branch {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    position: relative;
+    height: 28px;
+  }
+
+  .branch-svg {
+    width: 680px;
+    height: 28px;
+  }
+
+  .connector-merge {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    position: relative;
+    height: 28px;
+  }
+
+  .three-cols {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    gap: 12px;
+  }
+
+  .two-cols {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    gap: 16px;
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="content">
+      <div class="title">Session 2: Post-Mortem Analysis</div>
+      <div class="subtitle">Player data experiment + injury analysis</div>
+
+      <!-- Row 1: Trigger -->
+      <div class="node node-trigger">
+        <div class="node-tag">TRIGGER</div>
+        <div class="node-title">Tournament starts. Model misses key upsets on Day 1.</div>
+        <div class="node-desc">3 games predicted at 90%+ confidence for the wrong team, accounting for 64% of Day 1 prediction error</div>
+      </div>
+
+      <div class="connector"><svg viewBox="0 0 2 20"><line x1="1" y1="0" x2="1" y2="16" class="connector-line"/><polygon points="0,16 2,16 1,20" class="connector-arrow"/></svg></div>
+
+      <!-- Row 2: Question -->
+      <div class="node node-question">
+        <div class="node-title">Could individual player stats have predicted these upsets?</div>
+      </div>
+
+      <!-- Branch out to 3 -->
+      <div class="connector-branch">
+        <svg class="branch-svg" viewBox="0 0 680 28">
+          <line x1="340" y1="0" x2="340" y2="8" class="connector-line"/>
+          <line x1="113" y1="8" x2="567" y2="8" class="connector-line"/>
+          <line x1="113" y1="8" x2="113" y2="24" class="connector-line"/>
+          <polygon points="112,24 114,24 113,28" class="connector-arrow"/>
+          <line x1="340" y1="8" x2="340" y2="24" class="connector-line"/>
+          <polygon points="339,24 341,24 340,28" class="connector-arrow"/>
+          <line x1="567" y1="8" x2="567" y2="24" class="connector-line"/>
+          <polygon points="566,24 568,24 567,28" class="connector-arrow"/>
+        </svg>
+      </div>
+
+      <!-- Row 3: Three parallel actions -->
+      <div class="three-cols">
+        <div class="node node-action">
+          <div class="node-tag">PARALLEL</div>
+          <div class="node-title">Pull player data</div>
+          <div class="node-desc">Barttorvik API: 30K records spanning 6 seasons, 99.3% match rate</div>
+        </div>
+        <div class="node node-action">
+          <div class="node-tag">PARALLEL</div>
+          <div class="node-title">Audit existing features</div>
+          <div class="node-desc">67 files checked: confirmed no player-level data in pipeline</div>
+        </div>
+        <div class="node node-action">
+          <div class="node-tag">PARALLEL</div>
+          <div class="node-title">Pull live scores</div>
+          <div class="node-desc">ESPN results vs. model predictions for real-time validation</div>
+        </div>
+      </div>
+
+      <!-- Merge back -->
+      <div class="connector-merge">
+        <svg class="branch-svg" viewBox="0 0 680 28">
+          <line x1="113" y1="0" x2="113" y2="20" class="connector-line"/>
+          <line x1="340" y1="0" x2="340" y2="20" class="connector-line"/>
+          <line x1="567" y1="0" x2="567" y2="20" class="connector-line"/>
+          <line x1="113" y1="20" x2="567" y2="20" class="connector-line"/>
+          <line x1="340" y1="20" x2="340" y2="24" class="connector-line"/>
+          <polygon points="339,24 341,24 340,28" class="connector-arrow"/>
+        </svg>
+      </div>
+
+      <!-- Row 4: Process -->
+      <div class="node node-process">
+        <div class="node-tag">EXPERIMENT</div>
+        <div class="node-title">Engineer 8 player features, retrain 30 configurations across 3 architectures</div>
+        <div class="node-desc">Team WAR, Star WAR, senior %, avg class year, roster height, star dependency, experience mix</div>
+      </div>
+
+      <div class="connector"><svg viewBox="0 0 2 20"><line x1="1" y1="0" x2="1" y2="16" class="connector-line"/><polygon points="0,16 2,16 1,20" class="connector-arrow"/></svg></div>
+
+      <!-- Row 5: Failed result -->
+      <div class="node node-fail">
+        <div class="node-tag">RESULT</div>
+        <div class="node-title">Brier score: 0.050 -> 0.054. Every configuration got worse.</div>
+        <div class="node-desc">Player features correlated below r = 0.12 with outcomes. Not one cracked the top 15 in feature importance.</div>
+      </div>
+
+      <div class="connector"><svg viewBox="0 0 2 20"><line x1="1" y1="0" x2="1" y2="16" class="connector-line"/><polygon points="0,16 2,16 1,20" class="connector-arrow"/></svg></div>
+
+      <!-- Row 6: Insight -->
+      <div class="node node-insight">
+        <div class="node-tag">INSIGHT</div>
+        <div class="node-title">The irony: features that hurt the model are exactly what flagged the upsets.</div>
+        <div class="node-desc">The aggregate model doesn't need player data - adding it made every configuration worse. But focused player data (injuries, missing starters) is exactly what the edge cases need.</div>
+      </div>
+
+      <!-- Branch to 2 -->
+      <div class="connector-branch">
+        <svg class="branch-svg" viewBox="0 0 680 28">
+          <line x1="340" y1="0" x2="340" y2="8" class="connector-line"/>
+          <line x1="180" y1="8" x2="500" y2="8" class="connector-line"/>
+          <line x1="180" y1="8" x2="180" y2="24" class="connector-line"/>
+          <polygon points="179,24 181,24 180,28" class="connector-arrow"/>
+          <line x1="500" y1="8" x2="500" y2="24" class="connector-line"/>
+          <polygon points="499,24 501,24 500,28" class="connector-arrow"/>
+        </svg>
+      </div>
+
+      <!-- Row 7: Two outputs -->
+      <div class="two-cols">
+        <div class="node node-output">
+          <div class="node-tag">VALIDATED</div>
+          <div class="node-title">Research & validation</div>
+          <div class="node-desc">No publicly documented winning solution has used player-level features. 100-game minimum for reliable stats. Probability clipping standard practice.</div>
+        </div>
+        <div class="node node-output">
+          <div class="node-tag">VALIDATED</div>
+          <div class="node-title">Injury analysis</div>
+          <div class="node-desc">7 players injured pre-tipoff. Duke, Gonzaga, BYU impact quantified. Injury-adjusted numbers closer to truth.</div>
+        </div>
+      </div>
+
+      <!-- Merge to final -->
+      <div class="connector-merge">
+        <svg class="branch-svg" viewBox="0 0 680 28">
+          <line x1="180" y1="0" x2="180" y2="20" class="connector-line"/>
+          <line x1="500" y1="0" x2="500" y2="20" class="connector-line"/>
+          <line x1="180" y1="20" x2="500" y2="20" class="connector-line"/>
+          <line x1="340" y1="20" x2="340" y2="24" class="connector-line"/>
+          <polygon points="339,24 341,24 340,28" class="connector-arrow"/>
+        </svg>
+      </div>
+
+      <!-- Row 8: Final output -->
+      <div class="node node-result">
+        <div class="node-title">19 figures + game-by-game analysis + injury-adjusted predictions</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session 2: Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #080c14;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .canvas {
+    width: 1200px;
+    min-height: 760px;
+    background: #0e1525;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #1a2744;
+    display: grid;
+    grid-template-columns: 240px 1fr 280px;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+  }
+
+  .canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Header spans full width */
+  .header {
+    grid-column: 1 / -1;
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid #1a2744;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #e2e8f0;
+    letter-spacing: -0.3px;
+  }
+
+  .header .sub {
+    font-size: 12px;
+    color: #475569;
+    margin-top: 2px;
+  }
+
+  .header .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* INPUT PANEL (left) */
+  .input-panel {
+    padding: 24px 24px 24px 40px;
+    border-right: 1px solid #1a2744;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 4px;
+  }
+
+  .input-card {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    padding: 14px 16px;
+  }
+
+  .input-card .stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #f87171;
+    line-height: 1;
+  }
+
+  .input-card .stat-label {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  .input-card .stat-detail {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #64748b;
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+
+  .miss-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .miss-list li {
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 6px 0;
+    border-bottom: 1px solid #1a2744;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .miss-list li:last-child { border-bottom: none; }
+
+  .miss-list .brier {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #f87171;
+  }
+
+  /* CENTER PANEL (experiment pipeline) */
+  .center-panel {
+    padding: 24px 32px;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+  }
+
+  .exp-node {
+    width: 100%;
+    max-width: 480px;
+    padding: 12px 18px;
+    position: relative;
+  }
+
+  .exp-node .exp-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .exp-node .exp-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.3;
+  }
+
+  .exp-node .exp-desc {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  /* Node variants */
+  .exp-data {
+    border-left: 3px solid #6366f1;
+    background: rgba(99, 102, 241, 0.06);
+  }
+  .exp-data .exp-label { color: #6366f1; }
+
+  .exp-model {
+    border-left: 3px solid #8b5cf6;
+    background: rgba(139, 92, 246, 0.06);
+  }
+  .exp-model .exp-label { color: #8b5cf6; }
+
+  .exp-fail {
+    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    border-top: 1px dashed rgba(239, 68, 68, 0.3);
+    border-bottom: 1px dashed rgba(239, 68, 68, 0.3);
+    border-right: 1px dashed rgba(239, 68, 68, 0.3);
+  }
+  .exp-fail .exp-label { color: #ef4444; }
+  .exp-fail .exp-title { color: #fca5a5; }
+
+  .exp-insight {
+    border: 1.5px dashed #f59e0b;
+    border-left: 3px solid #f59e0b;
+    background: rgba(245, 158, 11, 0.06);
+  }
+  .exp-insight .exp-label { color: #f59e0b; }
+  .exp-insight .exp-title { color: #fbbf24; }
+  .exp-insight .exp-desc { color: #a16207; }
+
+  /* Connector lines in center */
+  .pipe {
+    width: 1.5px;
+    height: 14px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .pipe-solid { background: #334155; }
+  .pipe-dashed {
+    background: repeating-linear-gradient(180deg, #ef4444 0, #ef4444 3px, transparent 3px, transparent 6px);
+    opacity: 0.5;
+  }
+
+  .pipe-arrow {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #334155;
+    margin: 0 auto;
+  }
+
+  .fail-x {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #ef4444;
+    text-align: center;
+    line-height: 1;
+    padding: 2px 0;
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  }
+
+  /* OUTPUT PANEL (right) */
+  .output-panel {
+    padding: 24px 40px 24px 24px;
+    border-left: 1px solid #1a2744;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .finding-card {
+    padding: 14px 16px;
+  }
+
+  .finding-card.valid {
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .finding-card.warn {
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .finding-card .find-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+  }
+
+  .finding-card .find-desc {
+    font-size: 10.5px;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+
+  .finding-card .find-stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .finding-card.valid .find-stat { color: #34d399; }
+  .finding-card.warn .find-stat { color: #fbbf24; }
+
+  /* Footer */
+  .footer {
+    grid-column: 1 / -1;
+    padding: 14px 40px;
+    border-top: 1px solid #1a2744;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .footer .conclusion {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+
+  .footer .conclusion strong {
+    color: #e2e8f0;
+    font-weight: 600;
+  }
+
+  .footer .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #475569;
+  }
+
+  /* Comparison mini-table */
+  .compare-table {
+    width: 100%;
+    margin-top: 8px;
+    border-collapse: collapse;
+  }
+
+  .compare-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #475569;
+    text-align: left;
+    padding: 4px 0;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .compare-table td {
+    font-size: 10px;
+    color: #94a3b8;
+    padding: 3px 0;
+  }
+
+  .compare-table .label-col { width: 60%; }
+  .compare-table .saw { color: #64748b; }
+  .compare-table .missed { color: #fbbf24; font-weight: 500; }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>Session 2: Experiment Architecture</h1>
+        <div class="sub">Player data hypothesis testing and post-mortem analysis</div>
+      </div>
+      <div class="badge">~18 agents / ~6 hours</div>
+    </div>
+
+    <!-- LEFT: Input Panel -->
+    <div class="input-panel">
+      <div class="panel-label">Input: Day 1 Results</div>
+
+      <div class="input-card">
+        <div class="stat">5/16</div>
+        <div class="stat-label">games missed</div>
+        <div class="stat-detail">3 at 90%+ confidence<br>for the wrong team</div>
+      </div>
+
+      <div>
+        <div class="panel-label" style="margin-bottom: 8px;">Worst Misses (Brier)</div>
+        <ul class="miss-list">
+          <li>High Point / Wisconsin <span class="brier">0.916</span></li>
+          <li>Texas A&M / St. Mary's <span class="brier">0.838</span></li>
+          <li>Texas / BYU <span class="brier">0.779</span></li>
+          <li>TCU / Ohio State <span class="brier">0.671</span></li>
+          <li>Iowa / Clemson <span class="brier">0.635</span></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="panel-label" style="margin-bottom: 8px;">What model saw vs missed</div>
+        <table class="compare-table">
+          <tr><th class="label-col"></th><th>Saw</th><th>Missed</th></tr>
+          <tr><td>Wisconsin</td><td class="saw">5-seed</td><td class="missed">HP +10 NetEff</td></tr>
+          <tr><td>St. Mary's</td><td class="saw">1869 Elo</td><td class="missed">10% seniors</td></tr>
+          <tr><td>BYU</td><td class="saw">6-seed</td><td class="missed">TX 85.5 WAR</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- CENTER: Experiment Pipeline -->
+    <div class="center-panel">
+      <div class="exp-node exp-data">
+        <div class="exp-label">Data Collection</div>
+        <div class="exp-title">Pull 30,000 player records from Barttorvik</div>
+        <div class="exp-desc">6 seasons, 99.3% matched to Kaggle team IDs</div>
+      </div>
+
+      <div class="pipe pipe-solid"></div>
+      <div class="pipe-arrow"></div>
+
+      <div class="exp-node exp-data">
+        <div class="exp-label">Feature Engineering</div>
+        <div class="exp-title">Engineer 8 team-level player features</div>
+        <div class="exp-desc">Team WAR, Star WAR, Sr%, avg class year, roster height, star dependency, experience mix, WAR concentration</div>
+      </div>
+
+      <div class="pipe pipe-solid"></div>
+      <div class="pipe-arrow"></div>
+
+      <div class="exp-node exp-model">
+        <div class="exp-label">Model Retraining</div>
+        <div class="exp-title">Retrain 30 configs: XGBoost, LightGBM, Neural Net</div>
+        <div class="exp-desc">57 features expanded to 65 features per team-season</div>
+      </div>
+
+      <div class="pipe pipe-dashed"></div>
+      <div class="fail-x">&#x2717;</div>
+      <div class="pipe pipe-dashed"></div>
+
+      <div class="exp-node exp-fail">
+        <div class="exp-label">Failed Experiment</div>
+        <div class="exp-title">Brier: 0.0503 &rarr; 0.0544 (+0.004 worse)</div>
+        <div class="exp-desc">Every player feature correlated below r = 0.12. Not one cracked the top 15 in importance. Player stats are noise on top of team efficiency.</div>
+      </div>
+
+      <div class="pipe pipe-solid"></div>
+      <div class="pipe-arrow"></div>
+
+      <div class="exp-node exp-insight">
+        <div class="exp-label">Discovery</div>
+        <div class="exp-title">Features that hurt the model are exactly what flagged the upsets</div>
+        <div class="exp-desc">Team WAR predicted the upset winner in 7 of 12 wrong picks. The aggregate doesn't need them. The edge cases desperately do.</div>
+      </div>
+
+      <div class="pipe pipe-solid"></div>
+      <div class="pipe-arrow"></div>
+
+      <div class="exp-node exp-data" style="border-left-color: #10b981;">
+        <div class="exp-label" style="color: #10b981;">Output</div>
+        <div class="exp-title">19 figures, game-by-game analysis, injury adjustments</div>
+        <div class="exp-desc">Era-marked visualizations, prediction accuracy charts, feature comparison diagrams</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Output Panel -->
+    <div class="output-panel">
+      <div class="panel-label">Validated Findings</div>
+
+      <div class="finding-card valid">
+        <div class="find-title">WAR flags edge cases</div>
+        <div class="find-desc">Team WAR correctly identified the upset winner in the majority of the model's catastrophic misses, despite being useless in aggregate training.</div>
+        <div class="find-stat">7 / 12 wrong picks flagged</div>
+      </div>
+
+      <div class="finding-card valid">
+        <div class="find-title">Injuries are invisible signal</div>
+        <div class="find-desc">8 players out pre-tipoff. Duke's prediction dropped 13 points when adjusted. Gonzaga missing Huff (17.8 PPG). BYU missing Saunders (18.0 PPG).</div>
+        <div class="find-stat">Public 3-64 days before tipoff</div>
+      </div>
+
+      <div class="finding-card warn">
+        <div class="find-title">Probability clipping needed</div>
+        <div class="find-desc">Model output 97.1% and 96.1% raw. Past Kaggle winners clip to [2.5%, 97.5%]. Would have saved 0.15+ Brier on worst misses alone.</div>
+        <div class="find-stat">No clipping applied</div>
+      </div>
+
+      <div class="finding-card warn">
+        <div class="find-title">Elo dominates everything</div>
+        <div class="find-desc">Elo_diff is the #1 feature. When Elo disagrees with WAR, Sr%, coaching experience, Elo always wins. Creates extreme confidence in inflated ratings.</div>
+        <div class="find-stat">12/12 misses: Elo favored our pick</div>
+      </div>
+
+      <div class="finding-card valid">
+        <div class="find-title">No player data in winners</div>
+        <div class="find-desc">No documented Kaggle March Madness winner has used player-level features. goto_conversion ($47K in prizes) uses zero ML.</div>
+        <div class="find-stat">Confirmed via competition history</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="conclusion">
+        <strong>Conclusion:</strong> Player data is noise in aggregate, signal at the edges, and critical for injury adjustment.
+      </div>
+      <div class="meta">session 2 / march 2026</div>
+    </div>
+  </div>
+</body>
+</html>
